@@ -9,9 +9,21 @@
     ".": {
       "import": "./dist/index.js",
       "types": "./dist/index.d.ts"
+    },
+    "./tui": {
+      "import": "./dist/tui.js",
+      "types": "./dist/tui.d.ts"
+    },
+    "./runtime": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
     }
   },
-  "files": ["dist", "README.md", "LICENSE"],
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
   "scripts": {
     "build": "tsup",
     "dev": "tsup --watch",
@@ -35,15 +47,30 @@
     "zod": "^3.23.8"
   },
   "devDependencies": {
+    "@opentui/solid": "*",
     "@types/node": "^22.0.0",
+    "esbuild-plugin-solid": "^0.6.0",
+    "solid-js": "^1.9.12",
     "tsup": "^8.0.0",
     "typescript": "^5.5.0"
   },
   "peerDependencies": {
-    "@opencode-ai/plugin": "*"
+    "@opencode-ai/plugin": "*",
+    "@opentui/core": "*",
+    "@opentui/solid": "*",
+    "solid-js": "*"
   },
   "peerDependenciesMeta": {
     "@opencode-ai/plugin": {
+      "optional": true
+    },
+    "@opentui/core": {
+      "optional": true
+    },
+    "@opentui/solid": {
+      "optional": true
+    },
+    "solid-js": {
       "optional": true
     }
   },

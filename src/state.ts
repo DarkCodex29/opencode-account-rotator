@@ -18,7 +18,7 @@ import type { PersistedState } from "./types.js"
 // Constants
 // ---------------------------------------------------------------------------
 
-const STATE_PATH = join(
+export const STATE_PATH = join(
   homedir(),
   ".config",
   "opencode",

@@ -172,3 +172,18 @@ export interface OAuthTokenResponse {
   expires_in?: number
   token_type?: string
 }
+
+// ---------------------------------------------------------------------------
+// TUI display types
+// ---------------------------------------------------------------------------
+
+/**
+ * Display status for an account in the TUI sidebar and footer badge.
+ * Derived from the persisted state + live cooldown calculation.
+ */
+export type AccountDisplayStatus =
+  | "active"
+  | "ready"
+  | "cooldown"
+  | "expired"
+  | "disabled"
