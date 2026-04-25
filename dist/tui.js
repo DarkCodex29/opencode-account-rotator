@@ -3,14 +3,14 @@ import { createSignal as createSignal4, createEffect } from "solid-js";
 import { createComponent } from "@opentui/solid";
 
 // src/tui/SidebarPanel.tsx
-import { memo as _$memo } from "solid-js/web";
-import { createComponent as _$createComponent } from "solid-js/web";
-import { effect as _$effect } from "solid-js/web";
-import { createTextNode as _$createTextNode } from "solid-js/web";
-import { insertNode as _$insertNode } from "solid-js/web";
-import { insert as _$insert } from "solid-js/web";
-import { setProp as _$setProp } from "solid-js/web";
-import { createElement as _$createElement } from "solid-js/web";
+import { memo as _$memo } from "@opentui/solid";
+import { createComponent as _$createComponent } from "@opentui/solid";
+import { effect as _$effect } from "@opentui/solid";
+import { createTextNode as _$createTextNode } from "@opentui/solid";
+import { insertNode as _$insertNode } from "@opentui/solid";
+import { insert as _$insert } from "@opentui/solid";
+import { setProp as _$setProp } from "@opentui/solid";
+import { createElement as _$createElement } from "@opentui/solid";
 import { For, Show, createMemo, createSignal, onCleanup } from "solid-js";
 function statusEmoji(status) {
   switch (status) {
@@ -224,14 +224,14 @@ function SidebarPanel(props) {
 }
 
 // src/tui/FooterBadge.tsx
-import { createComponent as _$createComponent2 } from "solid-js/web";
-import { effect as _$effect2 } from "solid-js/web";
-import { insert as _$insert2 } from "solid-js/web";
-import { createTextNode as _$createTextNode2 } from "solid-js/web";
-import { insertNode as _$insertNode2 } from "solid-js/web";
-import { memo as _$memo2 } from "solid-js/web";
-import { setProp as _$setProp2 } from "solid-js/web";
-import { createElement as _$createElement2 } from "solid-js/web";
+import { createComponent as _$createComponent2 } from "@opentui/solid";
+import { effect as _$effect2 } from "@opentui/solid";
+import { insert as _$insert2 } from "@opentui/solid";
+import { createTextNode as _$createTextNode2 } from "@opentui/solid";
+import { insertNode as _$insertNode2 } from "@opentui/solid";
+import { memo as _$memo2 } from "@opentui/solid";
+import { setProp as _$setProp2 } from "@opentui/solid";
+import { createElement as _$createElement2 } from "@opentui/solid";
 import { Show as Show2, createMemo as createMemo2, createSignal as createSignal2, onCleanup as onCleanup2 } from "solid-js";
 function formatCountdown2(remainingMs) {
   const totalSeconds = Math.max(0, Math.floor(remainingMs / 1e3));

@@ -22,7 +22,7 @@ export default defineConfig([
     sourcemap: true,
     external: ["solid-js", "solid-js/web", "solid-js/store", "@opentui/core", "@opentui/solid", "@opencode-ai/plugin"],
     esbuildPlugins: [
-      solidPlugin({ solid: { generate: "universal", hydratable: false } }),
+      solidPlugin({ solid: { generate: "universal", hydratable: false, moduleName: "@opentui/solid" } }),
     ],
   },
 ])
