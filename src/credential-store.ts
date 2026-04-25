@@ -12,6 +12,7 @@ import { homedir } from "node:os"
 import { join } from "node:path"
 import { z } from "zod"
 import type { Account, OAuthTokenResponse, ResolvedConfig } from "./types.js"
+import { debugLog } from "./debug-log.js"
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -68,7 +69,7 @@ export async function discover(): Promise<Account[]> {
       // ~/.ccs/instances/ doesn't exist — no accounts available (SC-005)
       return []
     }
-    console.warn(`[account-rotator] Failed to read ${CCS_INSTANCES_DIR}: ${String(err)}`)
+    debugLog(`[account-rotator] Failed to read ${CCS_INSTANCES_DIR}: ${String(err)}`)
     return []
   }
 
@@ -86,7 +87,7 @@ export async function discover(): Promise<Account[]> {
       raw = JSON.parse(content) as unknown
     } catch (err) {
       // File missing or unreadable — skip with warning (SC-006)
-      console.warn(
+      debugLog(
         `[account-rotator] Skipping instance "${entry}": cannot read ${credPath} — ${String(err)}`
       )
       continue
@@ -95,7 +96,7 @@ export async function discover(): Promise<Account[]> {
     const result = credentialsSchema.safeParse(raw)
     if (!result.success) {
       // Schema validation failed — skip with warning (SC-006)
-      console.warn(
+      debugLog(
         `[account-rotator] Skipping instance "${entry}": invalid credentials schema at ${credPath}\n` +
           result.error.toString()
       )
@@ -193,7 +194,7 @@ export async function refreshAccountToken(account: Account): Promise<Account> {
     })
 
     if (!response.ok) {
-      console.warn(
+      debugLog(
         `[account-rotator] Token refresh failed for "${account.name}": HTTP ${response.status}`
       )
       return account
@@ -219,11 +220,11 @@ export async function refreshAccountToken(account: Account): Promise<Account> {
   } catch (err) {
     if (isAbortError(err)) {
       // SC-015: timeout hit
-      console.warn(
+      debugLog(
         `[account-rotator] Token refresh timed out for "${account.name}" — using existing token`
       )
     } else {
-      console.warn(
+      debugLog(
         `[account-rotator] Token refresh error for "${account.name}": ${String(err)}`
       )
     }
@@ -290,7 +291,7 @@ export async function readAuthJson(): Promise<{
       // File doesn't exist yet — not an error
       return null
     }
-    console.warn(
+    debugLog(
       `[account-rotator] Failed to read auth.json at ${AUTH_JSON_PATH}: ${String(err)}`
     )
     return null

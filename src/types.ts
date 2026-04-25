@@ -85,7 +85,11 @@ export interface PersistedState {
   cooldowns: CooldownEntry[]
   /** Timestamp of the last rotation */
   lastRotation: number | null
-  /** Health status per account name, as probed at startup */
+  /**
+   * Health status per account name, as probed at startup.
+   * @deprecated Passive health detection via auth watcher replaces startup probes.
+   * Field kept for backward compat with existing state.json files. Do not write.
+   */
   healthStatuses?: Record<string, HealthStatus>
 }
 

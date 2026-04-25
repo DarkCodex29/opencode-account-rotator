@@ -13,7 +13,7 @@ import { createComponent } from "@opentui/solid"
 import { SidebarPanel } from "./tui/SidebarPanel.js"
 import { FooterBadge } from "./tui/FooterBadge.js"
 import { useRotatorState } from "./tui/use-rotator-state.js"
-import { discover, refreshAccountToken, isTokenExpired } from "./credential-store.js"
+import { discover } from "./credential-store.js"
 import { createAuthWatcher } from "./auth-watcher.js"
 import type { TuiState } from "./tui/types.js"
 import type { Accessor } from "solid-js"
@@ -128,41 +128,6 @@ const tui = async (api: TuiAPI): Promise<void> => {
   let lastActiveAccount: string | null = null
   let wasExhausted = false
   const recoveredAccounts = new Set<string>()
-
-  // ─── Phase 5: Startup health check ───────────────────────────────────────
-  // Run once at init: check all discovered accounts for expired tokens and
-  // attempt refresh. This runs before any renders.
-  try {
-    const accounts = await discover()
-    for (const account of accounts) {
-      if (isTokenExpired(account)) {
-        try {
-          const refreshed = await refreshAccountToken(account)
-          if (refreshed.accessToken !== account.accessToken) {
-            api.ui.toast({
-              variant: "success",
-              message: `${account.name} token refreshed`,
-            })
-          } else {
-            api.ui.toast({
-              variant: "warning",
-              message: `${account.name} token expired — manual login required`,
-            })
-          }
-        } catch {
-          api.ui.toast({
-            variant: "warning",
-            message: `${account.name} token expired — manual login required`,
-          })
-        }
-      }
-    }
-  } catch {
-    // Startup health check is best-effort — never block TUI init
-  }
-
-  // Force a state refresh after health check
-  await refresh()
 
   // ─── Smart toast notifications ────────────────────────────────────────────
   // Watch for state changes and emit appropriate toasts (TUI-REQ-007).

@@ -13,6 +13,7 @@ import { homedir } from "node:os"
 import { join, dirname } from "node:path"
 import { z } from "zod"
 import type { PersistedState, HealthStatus } from "./types.js"
+import { debugLog } from "./debug-log.js"
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -57,7 +58,6 @@ function defaultState(): PersistedState {
     rotationIndex: 0,
     cooldowns: [],
     lastRotation: null,
-    healthStatuses: {},
   }
 }
 
@@ -82,7 +82,7 @@ export async function loadState(): Promise<PersistedState> {
       // Fresh install — no state yet
       return defaultState()
     }
-    console.warn(
+    debugLog(
       `[account-rotator] Failed to read state at ${STATE_PATH}: ${String(err)} — starting fresh`
     )
     return defaultState()
@@ -90,7 +90,7 @@ export async function loadState(): Promise<PersistedState> {
 
   const result = persistedStateSchema.safeParse(raw)
   if (!result.success) {
-    console.warn(
+    debugLog(
       `[account-rotator] State file at ${STATE_PATH} has invalid schema — starting fresh.\n` +
         result.error.toString()
     )
@@ -119,13 +119,12 @@ export async function loadState(): Promise<PersistedState> {
  * Excludes the in-memory history ring-buffer (REQ-010, SC-018).
  */
 export async function saveState(state: PersistedState): Promise<void> {
-  const payload: PersistedState = {
+  const payload: Omit<PersistedState, "healthStatuses"> = {
     activeAccount: state.activeAccount,
     accounts: state.accounts,
     rotationIndex: state.rotationIndex,
     cooldowns: state.cooldowns,
     lastRotation: state.lastRotation,
-    healthStatuses: state.healthStatuses ?? {},
   }
 
   const tmpPath = STATE_PATH + ".tmp"
@@ -135,7 +134,7 @@ export async function saveState(state: PersistedState): Promise<void> {
     await writeFile(tmpPath, JSON.stringify(payload, null, 2), "utf-8")
     await rename(tmpPath, STATE_PATH)
   } catch (err) {
-    console.warn(
+    debugLog(
       `[account-rotator] Failed to save state to ${STATE_PATH}: ${String(err)}`
     )
   }

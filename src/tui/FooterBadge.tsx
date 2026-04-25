@@ -72,35 +72,31 @@ export function FooterBadge(props: FooterBadgeProps) {
     () => props.state().accounts.length > 0
   )
 
-  // FIX-3: Always return a <box> so home_bottom slot always receives a valid element.
-  // The inner Show controls visibility — outer box is always present.
   return (
-    <box>
-      <Show when={visible()}>
-        <box paddingLeft={1} paddingRight={1}>
-          <Show
-            when={!isExhausted() && activeAccount() !== null}
-            fallback={
-              <box flexDirection="row">
-                <text fg={props.theme["warning"] ?? "yellow"}>⚠ No active account</text>
-              </box>
-            }
-          >
+    <Show when={visible()}>
+      <box paddingLeft={1} paddingRight={1}>
+        <Show
+          when={!isExhausted() && activeAccount() !== null}
+          fallback={
             <box flexDirection="row">
-              <text fg={props.theme["success"] ?? "green"}>⚡ {activeAccount()}</text>
-              <text fg={props.theme["textMuted"] ?? "gray"}>
-                {" "}({readyCount()} ready
-              </text>
-              <Show when={cooldownCount() > 0}>
-                <text fg={props.theme["textMuted"] ?? "gray"}>
-                  {" · "}{cooldownCount()} cooldown{shortestCooldownText()}
-                </text>
-              </Show>
-              <text fg={props.theme["textMuted"] ?? "gray"}>)</text>
+              <text fg={props.theme["warning"] ?? "yellow"}>⚠ No active account</text>
             </box>
-          </Show>
-        </box>
-      </Show>
-    </box>
+          }
+        >
+          <box flexDirection="row">
+            <text fg={props.theme["success"] ?? "green"}>⚡ {activeAccount()}</text>
+            <text fg={props.theme["textMuted"] ?? "gray"}>
+              {" "}({readyCount()} ready
+            </text>
+            <Show when={cooldownCount() > 0}>
+              <text fg={props.theme["textMuted"] ?? "gray"}>
+                {" · "}{cooldownCount()} cooldown{shortestCooldownText()}
+              </text>
+            </Show>
+            <text fg={props.theme["textMuted"] ?? "gray"}>)</text>
+          </box>
+        </Show>
+      </box>
+    </Show>
   )
 }

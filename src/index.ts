@@ -27,7 +27,7 @@ import {
 } from "./rotation-engine.js"
 import { loadState, saveState } from "./state.js"
 import { matchTokenToAccount, createAuthWatcher } from "./auth-watcher.js"
-import { probeAllAccounts } from "./health-check.js"
+import { debugLog } from "./debug-log.js"
 import type { Account, RotationState } from "./types.js"
 
 // ---------------------------------------------------------------------------
@@ -122,7 +122,7 @@ const plugin: Plugin = async (input: PluginInput): Promise<PluginHooks> => {
         config.notifyOnRotation
       )
     } else {
-      console.warn(
+      debugLog(
         "[account-rotator] Startup auth sync: auth.json token does not match any known CCS account"
       )
     }
@@ -131,35 +131,21 @@ const plugin: Plugin = async (input: PluginInput): Promise<PluginHooks> => {
   // --- Step 6: Write initial state so TUI can display accounts immediately ---
   await saveState(engine.getState())
 
-  // --- FIX-2: Run startup health check on all accounts (parallel) ---
-  // Fire-and-forget: don't block plugin init. Results are written to state.json
-  // so the TUI can read healthStatuses on the next poll tick.
-  void (async () => {
-    try {
-      const healthMap = await probeAllAccounts(accounts)
-      const currentState = engine.getState()
-      const healthStatuses: Record<string, import("./types.js").HealthStatus> = {}
-      for (const [name, status] of healthMap) {
-        healthStatuses[name] = status
-      }
-      await saveState({ ...currentState, healthStatuses })
-      notify(
-        `[account-rotator] Health check complete: ${JSON.stringify(healthStatuses)}`,
-        config.notifyOnRotation
-      )
-    } catch (err) {
-      console.warn(`[account-rotator] Health check error: ${String(err)}`)
-    }
-  })()
-
   // --- FIX-1: Start auth watcher for live rotation detection ---
   const authWatcher = createAuthWatcher({
     accounts,
     onAccountChanged: async (accountName) => {
-      const currentState = engine.getState()
-      if (accountName !== currentState.activeAccount) {
+      const previousAccount = engine.getState().activeAccount
+      if (accountName !== previousAccount) {
         // Mutate engine state via restoreState() — the canonical mutation path
         engine.restoreState({ activeAccount: accountName })
+
+        // Passive health detection: if we switched away from a real account,
+        // mark it as having hit a rate limit (FIX-1)
+        if (previousAccount !== null && previousAccount !== accountName) {
+          engine.markCooldown(previousAccount, config.cooldownMs, "429")
+        }
+
         await saveState(engine.getState())
         notify(
           `[account-rotator] Auth watcher: active account changed to "${accountName ?? "null"}"`,
@@ -281,13 +267,13 @@ const plugin: Plugin = async (input: PluginInput): Promise<PluginHooks> => {
  */
 function notifyToast(message: string, enabled: boolean): void {
   if (!enabled) return
-  console.log(`[account-rotator toast] ${message}`)
+  debugLog(`[account-rotator toast] ${message}`)
 }
 
 /** General informational log (startup, status) */
 function notify(message: string, enabled: boolean): void {
   if (!enabled) return
-  console.log(`[account-rotator] ${message}`)
+  debugLog(`[account-rotator] ${message}`)
 }
 
 // ---------------------------------------------------------------------------

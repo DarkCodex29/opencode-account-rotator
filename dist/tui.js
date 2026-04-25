@@ -267,75 +267,71 @@ function FooterBadge(props) {
     return ` ${formatCountdown2(shortest)}`;
   });
   const visible = createMemo2(() => props.state().accounts.length > 0);
-  return (() => {
-    var _el$ = _$createElement2("box");
-    _$insert2(_el$, _$createComponent2(Show2, {
-      get when() {
-        return visible();
-      },
-      get children() {
-        var _el$2 = _$createElement2("box");
-        _$setProp2(_el$2, "paddingLeft", 1);
-        _$setProp2(_el$2, "paddingRight", 1);
-        _$insert2(_el$2, _$createComponent2(Show2, {
-          get when() {
-            return _$memo2(() => !!!isExhausted())() && activeAccount() !== null;
-          },
-          get fallback() {
-            return (() => {
-              var _el$13 = _$createElement2("box"), _el$14 = _$createElement2("text");
-              _$insertNode2(_el$13, _el$14);
-              _$setProp2(_el$13, "flexDirection", "row");
-              _$insertNode2(_el$14, _$createTextNode2(`\u26A0 No active account`));
-              _$effect2((_$p) => _$setProp2(_el$14, "fg", props.theme["warning"] ?? "yellow", _$p));
-              return _el$13;
-            })();
-          },
-          get children() {
-            var _el$3 = _$createElement2("box"), _el$4 = _$createElement2("text"), _el$5 = _$createTextNode2(`\u26A1 `), _el$6 = _$createElement2("text"), _el$7 = _$createTextNode2(` (`), _el$9 = _$createTextNode2(` ready`), _el$11 = _$createElement2("text");
-            _$insertNode2(_el$3, _el$4);
-            _$insertNode2(_el$3, _el$6);
-            _$insertNode2(_el$3, _el$11);
-            _$setProp2(_el$3, "flexDirection", "row");
-            _$insertNode2(_el$4, _el$5);
-            _$insert2(_el$4, activeAccount, null);
-            _$insertNode2(_el$6, _el$7);
-            _$insertNode2(_el$6, _el$9);
-            _$insert2(_el$6, readyCount, _el$9);
-            _$insert2(_el$3, _$createComponent2(Show2, {
-              get when() {
-                return cooldownCount() > 0;
-              },
-              get children() {
-                var _el$0 = _$createElement2("text"), _el$1 = _$createTextNode2(` \xB7 `), _el$10 = _$createTextNode2(` cooldown`);
-                _$insertNode2(_el$0, _el$1);
-                _$insertNode2(_el$0, _el$10);
-                _$insert2(_el$0, cooldownCount, _el$10);
-                _$insert2(_el$0, shortestCooldownText, null);
-                _$effect2((_$p) => _$setProp2(_el$0, "fg", props.theme["textMuted"] ?? "gray", _$p));
-                return _el$0;
-              }
-            }), _el$11);
-            _$insertNode2(_el$11, _$createTextNode2(`)`));
-            _$effect2((_p$) => {
-              var _v$ = props.theme["success"] ?? "green", _v$2 = props.theme["textMuted"] ?? "gray", _v$3 = props.theme["textMuted"] ?? "gray";
-              _v$ !== _p$.e && (_p$.e = _$setProp2(_el$4, "fg", _v$, _p$.e));
-              _v$2 !== _p$.t && (_p$.t = _$setProp2(_el$6, "fg", _v$2, _p$.t));
-              _v$3 !== _p$.a && (_p$.a = _$setProp2(_el$11, "fg", _v$3, _p$.a));
-              return _p$;
-            }, {
-              e: void 0,
-              t: void 0,
-              a: void 0
-            });
-            return _el$3;
-          }
-        }));
-        return _el$2;
-      }
-    }));
-    return _el$;
-  })();
+  return _$createComponent2(Show2, {
+    get when() {
+      return visible();
+    },
+    get children() {
+      var _el$ = _$createElement2("box");
+      _$setProp2(_el$, "paddingLeft", 1);
+      _$setProp2(_el$, "paddingRight", 1);
+      _$insert2(_el$, _$createComponent2(Show2, {
+        get when() {
+          return _$memo2(() => !!!isExhausted())() && activeAccount() !== null;
+        },
+        get fallback() {
+          return (() => {
+            var _el$12 = _$createElement2("box"), _el$13 = _$createElement2("text");
+            _$insertNode2(_el$12, _el$13);
+            _$setProp2(_el$12, "flexDirection", "row");
+            _$insertNode2(_el$13, _$createTextNode2(`\u26A0 No active account`));
+            _$effect2((_$p) => _$setProp2(_el$13, "fg", props.theme["warning"] ?? "yellow", _$p));
+            return _el$12;
+          })();
+        },
+        get children() {
+          var _el$2 = _$createElement2("box"), _el$3 = _$createElement2("text"), _el$4 = _$createTextNode2(`\u26A1 `), _el$5 = _$createElement2("text"), _el$6 = _$createTextNode2(` (`), _el$8 = _$createTextNode2(` ready`), _el$10 = _$createElement2("text");
+          _$insertNode2(_el$2, _el$3);
+          _$insertNode2(_el$2, _el$5);
+          _$insertNode2(_el$2, _el$10);
+          _$setProp2(_el$2, "flexDirection", "row");
+          _$insertNode2(_el$3, _el$4);
+          _$insert2(_el$3, activeAccount, null);
+          _$insertNode2(_el$5, _el$6);
+          _$insertNode2(_el$5, _el$8);
+          _$insert2(_el$5, readyCount, _el$8);
+          _$insert2(_el$2, _$createComponent2(Show2, {
+            get when() {
+              return cooldownCount() > 0;
+            },
+            get children() {
+              var _el$9 = _$createElement2("text"), _el$0 = _$createTextNode2(` \xB7 `), _el$1 = _$createTextNode2(` cooldown`);
+              _$insertNode2(_el$9, _el$0);
+              _$insertNode2(_el$9, _el$1);
+              _$insert2(_el$9, cooldownCount, _el$1);
+              _$insert2(_el$9, shortestCooldownText, null);
+              _$effect2((_$p) => _$setProp2(_el$9, "fg", props.theme["textMuted"] ?? "gray", _$p));
+              return _el$9;
+            }
+          }), _el$10);
+          _$insertNode2(_el$10, _$createTextNode2(`)`));
+          _$effect2((_p$) => {
+            var _v$ = props.theme["success"] ?? "green", _v$2 = props.theme["textMuted"] ?? "gray", _v$3 = props.theme["textMuted"] ?? "gray";
+            _v$ !== _p$.e && (_p$.e = _$setProp2(_el$3, "fg", _v$, _p$.e));
+            _v$2 !== _p$.t && (_p$.t = _$setProp2(_el$5, "fg", _v$2, _p$.t));
+            _v$3 !== _p$.a && (_p$.a = _$setProp2(_el$10, "fg", _v$3, _p$.a));
+            return _p$;
+          }, {
+            e: void 0,
+            t: void 0,
+            a: void 0
+          });
+          return _el$2;
+        }
+      }));
+      return _el$;
+    }
+  });
 }
 
 // src/tui/use-rotator-state.ts
@@ -344,11 +340,32 @@ import { readFile as readFile2 } from "fs/promises";
 
 // src/state.ts
 import { readFile, writeFile, rename, mkdir } from "fs/promises";
-import { homedir } from "os";
-import { join, dirname } from "path";
+import { homedir as homedir2 } from "os";
+import { join as join2, dirname } from "path";
 import { z } from "zod";
-var STATE_PATH = join(
+
+// src/debug-log.ts
+import { appendFileSync } from "fs";
+import { homedir } from "os";
+import { join } from "path";
+var DEBUG_LOG_PATH = join(
   homedir(),
+  ".config",
+  "opencode",
+  "account-rotator-debug.log"
+);
+function debugLog(msg) {
+  const line = `${(/* @__PURE__ */ new Date()).toISOString()} ${msg}
+`;
+  try {
+    appendFileSync(DEBUG_LOG_PATH, line, "utf-8");
+  } catch {
+  }
+}
+
+// src/state.ts
+var STATE_PATH = join2(
+  homedir2(),
   ".config",
   "opencode",
   "account-rotator-state.json"
@@ -376,27 +393,19 @@ function emptyTuiState() {
     lastRotation: null,
     history: [],
     updatedAt: (/* @__PURE__ */ new Date()).toISOString(),
-    isExhausted: false,
-    healthStatuses: {}
+    isExhausted: false
   };
 }
 
 // src/tui/use-rotator-state.ts
-function deriveStatus(name, activeAccount, cooldowns, disabledNames, now, healthStatuses) {
-  if (disabledNames.has(name)) return "disabled";
-  if (name === activeAccount) return "active";
+function deriveStatus(name, activeAccount, cooldowns, now) {
   const cooldown = cooldowns.find((c) => c.account === name);
-  if (cooldown) {
-    if (cooldown.until > now) return "cooldown";
-  }
-  const health = healthStatuses[name];
-  if (health === "exhausted") return "exhausted";
-  if (health === "unknown") return "unknown";
+  if (cooldown && cooldown.until > now) return "cooldown";
+  if (name === activeAccount) return "active";
   return "ready";
 }
 function deriveState(raw) {
   const now = Date.now();
-  const healthStatuses = raw.healthStatuses ?? {};
   const accounts = raw.accounts.map((name) => {
     const cooldown = raw.cooldowns.find((c) => c.account === name);
     const cooldownUntil = cooldown && cooldown.until > now ? cooldown.until : null;
@@ -404,10 +413,7 @@ function deriveState(raw) {
       name,
       raw.activeAccount,
       raw.cooldowns,
-      /* @__PURE__ */ new Set(),
-      // disabled accounts not tracked in PersistedState; extend later
-      now,
-      healthStatuses
+      now
     );
     return {
       name,
@@ -426,8 +432,7 @@ function deriveState(raw) {
     history: [],
     // PersistedState does not include history — in-memory only
     updatedAt: (/* @__PURE__ */ new Date()).toISOString(),
-    isExhausted,
-    healthStatuses
+    isExhausted
   };
 }
 function parsePersistedState(content) {
@@ -498,15 +503,12 @@ function useRotatorState() {
 
 // src/credential-store.ts
 import { readdir, readFile as readFile3 } from "fs/promises";
-import { homedir as homedir2 } from "os";
-import { join as join2 } from "path";
+import { homedir as homedir3 } from "os";
+import { join as join3 } from "path";
 import { z as z2 } from "zod";
-var CCS_INSTANCES_DIR = join2(homedir2(), ".ccs", "instances");
+var CCS_INSTANCES_DIR = join3(homedir3(), ".ccs", "instances");
 var CREDENTIALS_FILENAME = ".credentials.json";
-var AUTH_JSON_PATH = join2(homedir2(), ".local", "share", "opencode", "auth.json");
-var CLAUDE_OAUTH_CLIENT_ID = "9d1c250a-e61b-44d9-88ed-5944d1962f5e";
-var OAUTH_TOKEN_URL = "https://platform.claude.com/v1/oauth/token";
-var TOKEN_REFRESH_TIMEOUT_MS = 3e3;
+var AUTH_JSON_PATH = join3(homedir3(), ".local", "share", "opencode", "auth.json");
 var credentialsSchema = z2.object({
   claudeAiOauth: z2.object({
     accessToken: z2.string().min(1),
@@ -522,26 +524,26 @@ async function discover() {
     if (isNodeError(err) && err.code === "ENOENT") {
       return [];
     }
-    console.warn(`[account-rotator] Failed to read ${CCS_INSTANCES_DIR}: ${String(err)}`);
+    debugLog(`[account-rotator] Failed to read ${CCS_INSTANCES_DIR}: ${String(err)}`);
     return [];
   }
   entries.sort();
   const accounts = [];
   for (const entry of entries) {
-    const credPath = join2(CCS_INSTANCES_DIR, entry, CREDENTIALS_FILENAME);
+    const credPath = join3(CCS_INSTANCES_DIR, entry, CREDENTIALS_FILENAME);
     let raw;
     try {
       const content = await readFile3(credPath, "utf-8");
       raw = JSON.parse(content);
     } catch (err) {
-      console.warn(
+      debugLog(
         `[account-rotator] Skipping instance "${entry}": cannot read ${credPath} \u2014 ${String(err)}`
       );
       continue;
     }
     const result = credentialsSchema.safeParse(raw);
     if (!result.success) {
-      console.warn(
+      debugLog(
         `[account-rotator] Skipping instance "${entry}": invalid credentials schema at ${credPath}
 ` + result.error.toString()
       );
@@ -557,51 +559,6 @@ async function discover() {
     });
   }
   return accounts;
-}
-async function refreshAccountToken(account) {
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), TOKEN_REFRESH_TIMEOUT_MS);
-  try {
-    const response = await fetch(OAUTH_TOKEN_URL, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        grant_type: "refresh_token",
-        refresh_token: account.refreshToken,
-        client_id: CLAUDE_OAUTH_CLIENT_ID
-      }),
-      signal: controller.signal
-    });
-    if (!response.ok) {
-      console.warn(
-        `[account-rotator] Token refresh failed for "${account.name}": HTTP ${response.status}`
-      );
-      return account;
-    }
-    const data = await response.json();
-    const now = Date.now();
-    const expiresAt = data.expires_in != null ? now + data.expires_in * 1e3 : account.expiresAt;
-    const updated = {
-      ...account,
-      accessToken: data.access_token,
-      refreshToken: data.refresh_token ?? account.refreshToken,
-      expiresAt
-    };
-    return updated;
-  } catch (err) {
-    if (isAbortError(err)) {
-      console.warn(
-        `[account-rotator] Token refresh timed out for "${account.name}" \u2014 using existing token`
-      );
-    } else {
-      console.warn(
-        `[account-rotator] Token refresh error for "${account.name}": ${String(err)}`
-      );
-    }
-    return account;
-  } finally {
-    clearTimeout(timer);
-  }
 }
 async function readAuthJson() {
   try {
@@ -628,7 +585,7 @@ async function readAuthJson() {
     if (isNodeError(err) && err.code === "ENOENT") {
       return null;
     }
-    console.warn(
+    debugLog(
       `[account-rotator] Failed to read auth.json at ${AUTH_JSON_PATH}: ${String(err)}`
     );
     return null;
@@ -636,12 +593,6 @@ async function readAuthJson() {
 }
 function isNodeError(err) {
   return err instanceof Error && "code" in err;
-}
-function isAbortError(err) {
-  return err instanceof Error && (err.name === "AbortError" || err.name === "TimeoutError");
-}
-function isTokenExpired(account, bufferMs = 6e4) {
-  return account.expiresAt - Date.now() < bufferMs;
 }
 
 // src/auth-watcher.ts
@@ -667,7 +618,7 @@ function createAuthWatcher(opts) {
   const processAuthChange = async () => {
     const authData = await readAuthJson();
     if (authData === null) {
-      console.warn(
+      debugLog(
         "[account-rotator] auth.json is absent or unreadable \u2014 preserving last known active account"
       );
       return;
@@ -678,7 +629,7 @@ function createAuthWatcher(opts) {
       try {
         await onAccountChanged(matched);
       } catch (err) {
-        console.warn(
+        debugLog(
           `[account-rotator] auth-watcher callback error: ${String(err)}`
         );
       }
@@ -693,19 +644,19 @@ function createAuthWatcher(opts) {
     watcher.on("error", (err) => {
       const nodeErr = err;
       if (nodeErr.code === "ENOENT") {
-        console.warn("[account-rotator] auth.json watcher: file not found \u2014 watching parent dir");
+        debugLog("[account-rotator] auth.json watcher: file not found \u2014 watching parent dir");
       } else {
-        console.warn(`[account-rotator] auth.json watcher error: ${String(err)}`);
+        debugLog(`[account-rotator] auth.json watcher error: ${String(err)}`);
       }
     });
   } catch (err) {
     const nodeErr = err;
     if (nodeErr.code === "ENOENT") {
-      console.warn(
+      debugLog(
         `[account-rotator] auth.json not found at ${AUTH_JSON_PATH} \u2014 watcher inactive until file is created`
       );
     } else {
-      console.warn(`[account-rotator] Failed to start auth watcher: ${String(err)}`);
+      debugLog(`[account-rotator] Failed to start auth watcher: ${String(err)}`);
     }
   }
   return {
@@ -750,34 +701,6 @@ var tui = async (api) => {
   let lastActiveAccount = null;
   let wasExhausted = false;
   const recoveredAccounts = /* @__PURE__ */ new Set();
-  try {
-    const accounts = await discover();
-    for (const account of accounts) {
-      if (isTokenExpired(account)) {
-        try {
-          const refreshed = await refreshAccountToken(account);
-          if (refreshed.accessToken !== account.accessToken) {
-            api.ui.toast({
-              variant: "success",
-              message: `${account.name} token refreshed`
-            });
-          } else {
-            api.ui.toast({
-              variant: "warning",
-              message: `${account.name} token expired \u2014 manual login required`
-            });
-          }
-        } catch {
-          api.ui.toast({
-            variant: "warning",
-            message: `${account.name} token expired \u2014 manual login required`
-          });
-        }
-      }
-    }
-  } catch {
-  }
-  await refresh();
   createEffect(() => {
     const s = state();
     const currentActive = s.activeAccount;

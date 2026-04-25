@@ -22,29 +22,18 @@ import { emptyTuiState } from "./types.js"
 
 /**
  * Derives an AccountDisplayStatus from the persisted state for a given account.
- * Health statuses from startup probes take precedence over "ready" fallback.
+ * Status priority: cooldown → active → ready.
  */
 function deriveStatus(
   name: string,
   activeAccount: string | null,
   cooldowns: PersistedState["cooldowns"],
-  disabledNames: Set<string>,
-  now: number,
-  healthStatuses: Record<string, string>
+  now: number
 ): AccountDisplayStatus {
-  if (disabledNames.has(name)) return "disabled"
-  if (name === activeAccount) return "active"
-
   const cooldown = cooldowns.find((c) => c.account === name)
-  if (cooldown) {
-    if (cooldown.until > now) return "cooldown"
-    // Cooldown expired — fall through to health status check
-  }
+  if (cooldown && cooldown.until > now) return "cooldown"
 
-  // FIX-2: Use health probe result from runtime if available
-  const health = healthStatuses[name]
-  if (health === "exhausted") return "exhausted"
-  if (health === "unknown") return "unknown"
+  if (name === activeAccount) return "active"
 
   return "ready"
 }
@@ -54,7 +43,6 @@ function deriveStatus(
  */
 function deriveState(raw: PersistedState): TuiState {
   const now = Date.now()
-  const healthStatuses = raw.healthStatuses ?? {}
 
   const accounts: AccountDisplay[] = raw.accounts.map((name) => {
     const cooldown = raw.cooldowns.find((c) => c.account === name)
@@ -65,9 +53,7 @@ function deriveState(raw: PersistedState): TuiState {
       name,
       raw.activeAccount,
       raw.cooldowns,
-      new Set<string>(), // disabled accounts not tracked in PersistedState; extend later
-      now,
-      healthStatuses
+      now
     )
 
     return {
@@ -92,7 +78,6 @@ function deriveState(raw: PersistedState): TuiState {
     history: [], // PersistedState does not include history — in-memory only
     updatedAt: new Date().toISOString(),
     isExhausted,
-    healthStatuses,
   }
 }
 

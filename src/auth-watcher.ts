@@ -13,6 +13,7 @@
 import { watch } from "node:fs"
 import type { FSWatcher } from "node:fs"
 import { AUTH_JSON_PATH, readAuthJson } from "./credential-store.js"
+import { debugLog } from "./debug-log.js"
 import type { Account } from "./types.js"
 
 // ---------------------------------------------------------------------------
@@ -82,7 +83,7 @@ export function createAuthWatcher(opts: AuthWatcherOptions): AuthWatcher {
 
     if (authData === null) {
       // File deleted or unreadable — log warning, keep last known account
-      console.warn(
+      debugLog(
         "[account-rotator] auth.json is absent or unreadable — preserving last known active account"
       )
       return
@@ -95,7 +96,7 @@ export function createAuthWatcher(opts: AuthWatcherOptions): AuthWatcher {
       try {
         await onAccountChanged(matched)
       } catch (err) {
-        console.warn(
+        debugLog(
           `[account-rotator] auth-watcher callback error: ${String(err)}`
         )
       }
@@ -114,19 +115,19 @@ export function createAuthWatcher(opts: AuthWatcherOptions): AuthWatcher {
     watcher.on("error", (err) => {
       const nodeErr = err as NodeJS.ErrnoException
       if (nodeErr.code === "ENOENT") {
-        console.warn("[account-rotator] auth.json watcher: file not found — watching parent dir")
+        debugLog("[account-rotator] auth.json watcher: file not found — watching parent dir")
       } else {
-        console.warn(`[account-rotator] auth.json watcher error: ${String(err)}`)
+        debugLog(`[account-rotator] auth.json watcher error: ${String(err)}`)
       }
     })
   } catch (err) {
     const nodeErr = err as NodeJS.ErrnoException
     if (nodeErr.code === "ENOENT") {
-      console.warn(
+      debugLog(
         `[account-rotator] auth.json not found at ${AUTH_JSON_PATH} — watcher inactive until file is created`
       )
     } else {
-      console.warn(`[account-rotator] Failed to start auth watcher: ${String(err)}`)
+      debugLog(`[account-rotator] Failed to start auth watcher: ${String(err)}`)
     }
   }
 

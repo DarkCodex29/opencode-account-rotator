@@ -46,8 +46,11 @@ export interface TuiState {
   updatedAt: string
   /** True if all accounts are in cooldown or expired */
   isExhausted: boolean
-  /** Health status per account name, as probed at startup by the runtime plugin */
-  healthStatuses: Record<string, string>
+  /**
+   * Health status per account name, as probed at startup by the runtime plugin.
+   * @deprecated Passive health detection replaces startup probes. Field may be absent.
+   */
+  healthStatuses?: Record<string, string>
 }
 
 /**
@@ -61,6 +64,5 @@ export function emptyTuiState(): TuiState {
     history: [],
     updatedAt: new Date().toISOString(),
     isExhausted: false,
-    healthStatuses: {},
   }
 }

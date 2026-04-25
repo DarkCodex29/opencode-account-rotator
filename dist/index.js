@@ -1,12 +1,33 @@
 // src/config.ts
 import { readFile } from "fs/promises";
+import { homedir as homedir2 } from "os";
+import { join as join2 } from "path";
+import { z } from "zod";
+
+// src/debug-log.ts
+import { appendFileSync } from "fs";
 import { homedir } from "os";
 import { join } from "path";
-import { z } from "zod";
+var DEBUG_LOG_PATH = join(
+  homedir(),
+  ".config",
+  "opencode",
+  "account-rotator-debug.log"
+);
+function debugLog(msg) {
+  const line = `${(/* @__PURE__ */ new Date()).toISOString()} ${msg}
+`;
+  try {
+    appendFileSync(DEBUG_LOG_PATH, line, "utf-8");
+  } catch {
+  }
+}
+
+// src/config.ts
 var DEFAULT_COOLDOWN_MS = 3e5;
 var DEFAULT_MAX_HISTORY_SIZE = 50;
 var DEFAULT_NOTIFY_ON_ROTATION = true;
-var CONFIG_PATH = join(homedir(), ".config", "opencode", "account-rotator.json");
+var CONFIG_PATH = join2(homedir2(), ".config", "opencode", "account-rotator.json");
 var accountEntrySchema = z.object({
   enabled: z.boolean()
 });
@@ -26,14 +47,14 @@ async function loadConfig() {
     if (isNodeError(err) && err.code === "ENOENT") {
       return buildDefaults({});
     }
-    console.warn(
+    debugLog(
       `[account-rotator] Failed to read config at ${CONFIG_PATH}: ${String(err)}`
     );
     return buildDefaults({});
   }
   const result = pluginConfigSchema.safeParse(raw);
   if (!result.success) {
-    console.warn(
+    debugLog(
       `[account-rotator] Config at ${CONFIG_PATH} failed validation \u2014 using defaults.
 ` + result.error.toString()
     );
@@ -63,12 +84,12 @@ function isNodeError(err) {
 
 // src/credential-store.ts
 import { readdir, readFile as readFile2 } from "fs/promises";
-import { homedir as homedir2 } from "os";
-import { join as join2 } from "path";
+import { homedir as homedir3 } from "os";
+import { join as join3 } from "path";
 import { z as z2 } from "zod";
-var CCS_INSTANCES_DIR = join2(homedir2(), ".ccs", "instances");
+var CCS_INSTANCES_DIR = join3(homedir3(), ".ccs", "instances");
 var CREDENTIALS_FILENAME = ".credentials.json";
-var AUTH_JSON_PATH = join2(homedir2(), ".local", "share", "opencode", "auth.json");
+var AUTH_JSON_PATH = join3(homedir3(), ".local", "share", "opencode", "auth.json");
 var CLAUDE_OAUTH_CLIENT_ID = "9d1c250a-e61b-44d9-88ed-5944d1962f5e";
 var OAUTH_TOKEN_URL = "https://platform.claude.com/v1/oauth/token";
 var TOKEN_REFRESH_TIMEOUT_MS = 3e3;
@@ -87,26 +108,26 @@ async function discover() {
     if (isNodeError2(err) && err.code === "ENOENT") {
       return [];
     }
-    console.warn(`[account-rotator] Failed to read ${CCS_INSTANCES_DIR}: ${String(err)}`);
+    debugLog(`[account-rotator] Failed to read ${CCS_INSTANCES_DIR}: ${String(err)}`);
     return [];
   }
   entries.sort();
   const accounts = [];
   for (const entry of entries) {
-    const credPath = join2(CCS_INSTANCES_DIR, entry, CREDENTIALS_FILENAME);
+    const credPath = join3(CCS_INSTANCES_DIR, entry, CREDENTIALS_FILENAME);
     let raw;
     try {
       const content = await readFile2(credPath, "utf-8");
       raw = JSON.parse(content);
     } catch (err) {
-      console.warn(
+      debugLog(
         `[account-rotator] Skipping instance "${entry}": cannot read ${credPath} \u2014 ${String(err)}`
       );
       continue;
     }
     const result = credentialsSchema.safeParse(raw);
     if (!result.success) {
-      console.warn(
+      debugLog(
         `[account-rotator] Skipping instance "${entry}": invalid credentials schema at ${credPath}
 ` + result.error.toString()
       );
@@ -163,7 +184,7 @@ async function refreshAccountToken(account) {
       signal: controller.signal
     });
     if (!response.ok) {
-      console.warn(
+      debugLog(
         `[account-rotator] Token refresh failed for "${account.name}": HTTP ${response.status}`
       );
       return account;
@@ -180,11 +201,11 @@ async function refreshAccountToken(account) {
     return updated;
   } catch (err) {
     if (isAbortError(err)) {
-      console.warn(
+      debugLog(
         `[account-rotator] Token refresh timed out for "${account.name}" \u2014 using existing token`
       );
     } else {
-      console.warn(
+      debugLog(
         `[account-rotator] Token refresh error for "${account.name}": ${String(err)}`
       );
     }
@@ -218,7 +239,7 @@ async function readAuthJson() {
     if (isNodeError2(err) && err.code === "ENOENT") {
       return null;
     }
-    console.warn(
+    debugLog(
       `[account-rotator] Failed to read auth.json at ${AUTH_JSON_PATH}: ${String(err)}`
     );
     return null;
@@ -475,11 +496,11 @@ function createEmptyState() {
 
 // src/state.ts
 import { readFile as readFile3, writeFile, rename, mkdir } from "fs/promises";
-import { homedir as homedir3 } from "os";
-import { join as join3, dirname } from "path";
+import { homedir as homedir4 } from "os";
+import { join as join4, dirname } from "path";
 import { z as z3 } from "zod";
-var STATE_PATH = join3(
-  homedir3(),
+var STATE_PATH = join4(
+  homedir4(),
   ".config",
   "opencode",
   "account-rotator-state.json"
@@ -504,8 +525,7 @@ function defaultState() {
     accounts: [],
     rotationIndex: 0,
     cooldowns: [],
-    lastRotation: null,
-    healthStatuses: {}
+    lastRotation: null
   };
 }
 async function loadState() {
@@ -517,14 +537,14 @@ async function loadState() {
     if (isNodeError3(err) && err.code === "ENOENT") {
       return defaultState();
     }
-    console.warn(
+    debugLog(
       `[account-rotator] Failed to read state at ${STATE_PATH}: ${String(err)} \u2014 starting fresh`
     );
     return defaultState();
   }
   const result = persistedStateSchema.safeParse(raw);
   if (!result.success) {
-    console.warn(
+    debugLog(
       `[account-rotator] State file at ${STATE_PATH} has invalid schema \u2014 starting fresh.
 ` + result.error.toString()
     );
@@ -549,8 +569,7 @@ async function saveState(state) {
     accounts: state.accounts,
     rotationIndex: state.rotationIndex,
     cooldowns: state.cooldowns,
-    lastRotation: state.lastRotation,
-    healthStatuses: state.healthStatuses ?? {}
+    lastRotation: state.lastRotation
   };
   const tmpPath = STATE_PATH + ".tmp";
   try {
@@ -558,7 +577,7 @@ async function saveState(state) {
     await writeFile(tmpPath, JSON.stringify(payload, null, 2), "utf-8");
     await rename(tmpPath, STATE_PATH);
   } catch (err) {
-    console.warn(
+    debugLog(
       `[account-rotator] Failed to save state to ${STATE_PATH}: ${String(err)}`
     );
   }
@@ -590,7 +609,7 @@ function createAuthWatcher(opts) {
   const processAuthChange = async () => {
     const authData = await readAuthJson();
     if (authData === null) {
-      console.warn(
+      debugLog(
         "[account-rotator] auth.json is absent or unreadable \u2014 preserving last known active account"
       );
       return;
@@ -601,7 +620,7 @@ function createAuthWatcher(opts) {
       try {
         await onAccountChanged(matched);
       } catch (err) {
-        console.warn(
+        debugLog(
           `[account-rotator] auth-watcher callback error: ${String(err)}`
         );
       }
@@ -616,19 +635,19 @@ function createAuthWatcher(opts) {
     watcher.on("error", (err) => {
       const nodeErr = err;
       if (nodeErr.code === "ENOENT") {
-        console.warn("[account-rotator] auth.json watcher: file not found \u2014 watching parent dir");
+        debugLog("[account-rotator] auth.json watcher: file not found \u2014 watching parent dir");
       } else {
-        console.warn(`[account-rotator] auth.json watcher error: ${String(err)}`);
+        debugLog(`[account-rotator] auth.json watcher error: ${String(err)}`);
       }
     });
   } catch (err) {
     const nodeErr = err;
     if (nodeErr.code === "ENOENT") {
-      console.warn(
+      debugLog(
         `[account-rotator] auth.json not found at ${AUTH_JSON_PATH} \u2014 watcher inactive until file is created`
       );
     } else {
-      console.warn(`[account-rotator] Failed to start auth watcher: ${String(err)}`);
+      debugLog(`[account-rotator] Failed to start auth watcher: ${String(err)}`);
     }
   }
   return {
@@ -644,80 +663,6 @@ function createAuthWatcher(opts) {
       watcher = null;
     }
   };
-}
-
-// src/health-check.ts
-var CLAUDE_OAUTH_CLIENT_ID2 = "9d1c250a-e61b-44d9-88ed-5944d1962f5e";
-var OAUTH_TOKEN_URL2 = "https://platform.claude.com/v1/oauth/token";
-var PROBE_TIMEOUT_MS = 5e3;
-async function probeAccount(account) {
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), PROBE_TIMEOUT_MS);
-  try {
-    const response = await fetch(OAUTH_TOKEN_URL2, {
-      method: "POST",
-      headers: {
-        "content-type": "application/json"
-      },
-      body: JSON.stringify({
-        grant_type: "refresh_token",
-        refresh_token: account.refreshToken,
-        client_id: CLAUDE_OAUTH_CLIENT_ID2
-      }),
-      signal: controller.signal
-    });
-    if (response.status === 200) {
-      try {
-        const data = await response.json();
-        if (data.access_token) {
-          account.accessToken = data.access_token;
-        }
-        if (data.refresh_token) {
-          account.refreshToken = data.refresh_token;
-        }
-        if (data.expires_in) {
-          account.expiresAt = Date.now() + data.expires_in * 1e3;
-        }
-      } catch {
-      }
-      return "ready";
-    }
-    if (response.status === 429) {
-      return "unchecked";
-    }
-    if (response.status === 401 || response.status === 403) {
-      return "exhausted";
-    }
-    console.warn(
-      `[account-rotator] Health probe for "${account.name}" returned HTTP ${response.status} \u2014 marking unknown`
-    );
-    return "unknown";
-  } catch (err) {
-    if (isAbortError2(err)) {
-      console.warn(
-        `[account-rotator] Health probe timed out for "${account.name}" \u2014 marking unknown`
-      );
-    } else {
-      console.warn(
-        `[account-rotator] Health probe error for "${account.name}": ${String(err)} \u2014 marking unknown`
-      );
-    }
-    return "unknown";
-  } finally {
-    clearTimeout(timer);
-  }
-}
-async function probeAllAccounts(accounts) {
-  const results = await Promise.all(
-    accounts.map(async (account) => {
-      const status = await probeAccount(account);
-      return [account.name, status];
-    })
-  );
-  return new Map(results);
-}
-function isAbortError2(err) {
-  return err instanceof Error && (err.name === "AbortError" || err.name === "TimeoutError");
 }
 
 // src/index.ts
@@ -755,35 +700,21 @@ var plugin = async (input) => {
         config.notifyOnRotation
       );
     } else {
-      console.warn(
+      debugLog(
         "[account-rotator] Startup auth sync: auth.json token does not match any known CCS account"
       );
     }
   }
   await saveState(engine.getState());
-  void (async () => {
-    try {
-      const healthMap = await probeAllAccounts(accounts);
-      const currentState = engine.getState();
-      const healthStatuses = {};
-      for (const [name, status] of healthMap) {
-        healthStatuses[name] = status;
-      }
-      await saveState({ ...currentState, healthStatuses });
-      notify(
-        `[account-rotator] Health check complete: ${JSON.stringify(healthStatuses)}`,
-        config.notifyOnRotation
-      );
-    } catch (err) {
-      console.warn(`[account-rotator] Health check error: ${String(err)}`);
-    }
-  })();
   const authWatcher = createAuthWatcher({
     accounts,
     onAccountChanged: async (accountName) => {
-      const currentState = engine.getState();
-      if (accountName !== currentState.activeAccount) {
+      const previousAccount = engine.getState().activeAccount;
+      if (accountName !== previousAccount) {
         engine.restoreState({ activeAccount: accountName });
+        if (previousAccount !== null && previousAccount !== accountName) {
+          engine.markCooldown(previousAccount, config.cooldownMs, "429");
+        }
         await saveState(engine.getState());
         notify(
           `[account-rotator] Auth watcher: active account changed to "${accountName ?? "null"}"`,
@@ -862,11 +793,11 @@ var plugin = async (input) => {
 };
 function notifyToast(message, enabled) {
   if (!enabled) return;
-  console.log(`[account-rotator toast] ${message}`);
+  debugLog(`[account-rotator toast] ${message}`);
 }
 function notify(message, enabled) {
   if (!enabled) return;
-  console.log(`[account-rotator] ${message}`);
+  debugLog(`[account-rotator] ${message}`);
 }
 var index_default = {
   id: "account-rotator",

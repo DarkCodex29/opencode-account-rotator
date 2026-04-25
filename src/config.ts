@@ -10,6 +10,7 @@ import { homedir } from "node:os"
 import { join } from "node:path"
 import { z } from "zod"
 import type { PluginConfig, ResolvedConfig } from "./types.js"
+import { debugLog } from "./debug-log.js"
 
 // ---------------------------------------------------------------------------
 // Defaults
@@ -59,7 +60,7 @@ export async function loadConfig(): Promise<ResolvedConfig> {
       return buildDefaults({})
     }
     // Unexpected read/parse error → warn and use defaults
-    console.warn(
+    debugLog(
       `[account-rotator] Failed to read config at ${CONFIG_PATH}: ${String(err)}`
     )
     return buildDefaults({})
@@ -67,7 +68,7 @@ export async function loadConfig(): Promise<ResolvedConfig> {
 
   const result = pluginConfigSchema.safeParse(raw)
   if (!result.success) {
-    console.warn(
+    debugLog(
       `[account-rotator] Config at ${CONFIG_PATH} failed validation — using defaults.\n` +
         result.error.toString()
     )
