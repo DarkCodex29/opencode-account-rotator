@@ -384,6 +384,7 @@ var persistedStateSchema = z.object({
   lastRotation: z.number().int().nullable(),
   healthStatuses: z.record(z.string(), healthStatusSchema).optional()
 });
+var saveChain = Promise.resolve();
 
 // src/tui/types.ts
 function emptyTuiState() {

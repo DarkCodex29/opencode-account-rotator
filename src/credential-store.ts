@@ -299,6 +299,56 @@ export async function readAuthJson(): Promise<{
 }
 
 // ---------------------------------------------------------------------------
+// Token re-discovery (stale in-memory snapshot fix)
+// ---------------------------------------------------------------------------
+
+/**
+ * Re-reads a single account's credentials from disk and returns an updated
+ * Account object with fresh tokens.
+ *
+ * Call this when matchTokenToAccount() returns null — the in-memory snapshot
+ * may be stale because the login plugin wrote new tokens after a refresh.
+ * Returns null if the account directory or credentials file cannot be read.
+ *
+ * This function does NOT mutate the accounts array — callers must update
+ * their own reference if needed.
+ */
+export async function rediscoverAccount(
+  name: string
+): Promise<Account | null> {
+  const credPath = join(CCS_INSTANCES_DIR, name, CREDENTIALS_FILENAME)
+
+  let raw: unknown
+  try {
+    const content = await readFile(credPath, "utf-8")
+    raw = JSON.parse(content) as unknown
+  } catch (err) {
+    debugLog(
+      `[account-rotator] rediscoverAccount("${name}"): cannot read ${credPath} — ${String(err)}`
+    )
+    return null
+  }
+
+  const result = credentialsSchema.safeParse(raw)
+  if (!result.success) {
+    debugLog(
+      `[account-rotator] rediscoverAccount("${name}"): invalid schema at ${credPath}\n` +
+        result.error.toString()
+    )
+    return null
+  }
+
+  const { claudeAiOauth } = result.data
+  return {
+    name,
+    credentialsPath: credPath,
+    accessToken: claudeAiOauth.accessToken,
+    refreshToken: claudeAiOauth.refreshToken,
+    expiresAt: claudeAiOauth.expiresAt,
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Private helpers
 // ---------------------------------------------------------------------------
 

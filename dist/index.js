@@ -245,6 +245,35 @@ async function readAuthJson() {
     return null;
   }
 }
+async function rediscoverAccount(name) {
+  const credPath = join3(CCS_INSTANCES_DIR, name, CREDENTIALS_FILENAME);
+  let raw;
+  try {
+    const content = await readFile2(credPath, "utf-8");
+    raw = JSON.parse(content);
+  } catch (err) {
+    debugLog(
+      `[account-rotator] rediscoverAccount("${name}"): cannot read ${credPath} \u2014 ${String(err)}`
+    );
+    return null;
+  }
+  const result = credentialsSchema.safeParse(raw);
+  if (!result.success) {
+    debugLog(
+      `[account-rotator] rediscoverAccount("${name}"): invalid schema at ${credPath}
+` + result.error.toString()
+    );
+    return null;
+  }
+  const { claudeAiOauth } = result.data;
+  return {
+    name,
+    credentialsPath: credPath,
+    accessToken: claudeAiOauth.accessToken,
+    refreshToken: claudeAiOauth.refreshToken,
+    expiresAt: claudeAiOauth.expiresAt
+  };
+}
 function isNodeError2(err) {
   return err instanceof Error && "code" in err;
 }
@@ -563,7 +592,20 @@ async function loadState() {
   }
   return state;
 }
-async function saveState(state) {
+var saveChain = Promise.resolve();
+function saveState(state) {
+  const snapshot = {
+    activeAccount: state.activeAccount,
+    accounts: [...state.accounts],
+    rotationIndex: state.rotationIndex,
+    cooldowns: state.cooldowns.map((c) => ({ ...c })),
+    lastRotation: state.lastRotation
+  };
+  saveChain = saveChain.then(() => doSaveState(snapshot)).catch(() => {
+  });
+  return saveChain;
+}
+async function doSaveState(state) {
   const payload = {
     activeAccount: state.activeAccount,
     accounts: state.accounts,
@@ -710,15 +752,105 @@ var plugin = async (input) => {
     accounts,
     onAccountChanged: async (accountName) => {
       const previousAccount = engine.getState().activeAccount;
-      if (accountName !== previousAccount) {
-        engine.restoreState({ activeAccount: accountName });
-        if (previousAccount !== null && previousAccount !== accountName) {
-          engine.markCooldown(previousAccount, config.cooldownMs, "429");
+      if (accountName !== null) {
+        if (accountName !== previousAccount) {
+          engine.restoreState({ activeAccount: accountName });
+          await saveState(engine.getState());
+          notify(
+            `[account-rotator] Auth watcher: active account changed to "${accountName}"`,
+            config.notifyOnRotation
+          );
         }
-        await saveState(engine.getState());
+        return;
+      }
+      debugLog(
+        `[account-rotator] Auth watcher: token did not match any known account \u2014 attempting re-discovery`
+      );
+      const authData2 = await readAuthJson();
+      if (authData2 !== null) {
+        for (const acc of accounts) {
+          const fresh = await rediscoverAccount(acc.name);
+          if (fresh !== null && fresh.accessToken === authData2.access) {
+            acc.accessToken = fresh.accessToken;
+            acc.refreshToken = fresh.refreshToken;
+            acc.expiresAt = fresh.expiresAt;
+            if (fresh.name !== previousAccount) {
+              engine.restoreState({ activeAccount: fresh.name });
+              await saveState(engine.getState());
+              notify(
+                `[account-rotator] Auth watcher: re-discovered token matches "${fresh.name}" \u2014 updating active account`,
+                config.notifyOnRotation
+              );
+            } else {
+              debugLog(
+                `[account-rotator] Auth watcher: re-discovered token still matches "${fresh.name}" (token was refreshed in-place)`
+              );
+            }
+            return;
+          }
+        }
+      }
+      debugLog(
+        `[account-rotator] Auth watcher: active account changed to "null" \u2014 initiating active rotation`
+      );
+      if (previousAccount !== null) {
+        engine.markCooldown(previousAccount, config.cooldownMs, "429");
+      }
+      if (engine.isExhausted()) {
+        const waitSec = Math.ceil(engine.shortestCooldownMs() / 1e3);
         notify(
-          `[account-rotator] Auth watcher: active account changed to "${accountName ?? "null"}"`,
+          `[account-rotator] Auth watcher: all accounts exhausted \u2014 retry in ${waitSec}s`,
           config.notifyOnRotation
+        );
+        engine.scheduleReEnable(() => {
+          notify(
+            "\u{1F504} Account Rotator: cooldown expired \u2014 accounts available again",
+            config.notifyOnRotation
+          );
+        });
+        await saveState(engine.getState());
+        return;
+      }
+      try {
+        const next = await engine.rotate(null, "429");
+        if (next === null) {
+          const waitSec = Math.ceil(engine.shortestCooldownMs() / 1e3);
+          notify(
+            `[account-rotator] Auth watcher: all accounts exhausted after rotation \u2014 retry in ${waitSec}s`,
+            config.notifyOnRotation
+          );
+          engine.scheduleReEnable(() => {
+            notify(
+              "\u{1F504} Account Rotator: cooldown expired \u2014 accounts available again",
+              config.notifyOnRotation
+            );
+          });
+          await saveState(engine.getState());
+          return;
+        }
+        let accountToActivate = next;
+        if (isTokenExpired(next)) {
+          accountToActivate = await refreshAccountToken(next);
+        }
+        await client.auth.set({
+          path: { id: "anthropic" },
+          body: {
+            type: "oauth",
+            access: accountToActivate.accessToken,
+            refresh: accountToActivate.refreshToken,
+            expires: accountToActivate.expiresAt
+          }
+        });
+        await saveState(engine.getState());
+        const allAccounts = engine.getAccounts();
+        const idx = allAccounts.findIndex((a) => a.name === accountToActivate.name) + 1;
+        notify(
+          `\u{1F504} [account-rotator] Auth watcher: rotated to ${accountToActivate.name} (${idx}/${allAccounts.length})`,
+          config.notifyOnRotation
+        );
+      } catch (err) {
+        debugLog(
+          `[account-rotator] Auth watcher: active rotation failed \u2014 ${String(err)}`
         );
       }
     }

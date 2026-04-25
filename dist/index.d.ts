@@ -279,6 +279,9 @@ declare function loadState(): Promise<PersistedState>;
  *
  * Uses write-to-tmp → rename to avoid partial writes (REQ-007 analogy).
  * Excludes the in-memory history ring-buffer (REQ-010, SC-018).
+ *
+ * Concurrent calls are serialized via an internal promise chain to prevent
+ * ENOENT race conditions on the .tmp file rename step.
  */
 declare function saveState(state: PersistedState): Promise<void>;
 

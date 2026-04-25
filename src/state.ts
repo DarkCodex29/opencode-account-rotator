@@ -112,13 +112,50 @@ export async function loadState(): Promise<PersistedState> {
   return state
 }
 
+// ---------------------------------------------------------------------------
+// Save mutex — prevents concurrent rename() race conditions (ENOENT on .tmp)
+// ---------------------------------------------------------------------------
+
+/**
+ * Module-level promise chain that serializes all saveState calls.
+ *
+ * When two callers (e.g. auth watcher + event hook) call saveState()
+ * concurrently, each appends to this chain so writes are serialized.
+ * Errors are swallowed inside the chain so one failure doesn't block
+ * subsequent saves.
+ */
+let saveChain: Promise<void> = Promise.resolve()
+
 /**
  * Atomically saves the persisted state to disk.
  *
  * Uses write-to-tmp → rename to avoid partial writes (REQ-007 analogy).
  * Excludes the in-memory history ring-buffer (REQ-010, SC-018).
+ *
+ * Concurrent calls are serialized via an internal promise chain to prevent
+ * ENOENT race conditions on the .tmp file rename step.
  */
-export async function saveState(state: PersistedState): Promise<void> {
+export function saveState(state: PersistedState): Promise<void> {
+  // Capture a snapshot of the state NOW so that later mutations don't
+  // affect the data we're about to write (defensive copy).
+  const snapshot: PersistedState = {
+    activeAccount: state.activeAccount,
+    accounts: [...state.accounts],
+    rotationIndex: state.rotationIndex,
+    cooldowns: state.cooldowns.map((c) => ({ ...c })),
+    lastRotation: state.lastRotation,
+  }
+
+  saveChain = saveChain
+    .then(() => doSaveState(snapshot))
+    .catch(() => {
+      // Swallow so the chain never rejects permanently
+    })
+
+  return saveChain
+}
+
+async function doSaveState(state: PersistedState): Promise<void> {
   const payload: Omit<PersistedState, "healthStatuses"> = {
     activeAccount: state.activeAccount,
     accounts: state.accounts,
