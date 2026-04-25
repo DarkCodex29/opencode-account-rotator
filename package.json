@@ -1,22 +1,21 @@
 {
   "name": "opencode-account-rotator",
   "version": "0.1.0",
-  "description": "OpenCode plugin that adds round-robin account rotation with cooldown tracking and TUI notifications on top of anthropic-login-via-cli",
-  "main": "dist/index.js",
-  "types": "dist/index.d.ts",
+  "description": "OpenCode plugin that adds round-robin account rotation with cooldown tracking and TUI sidebar on top of anthropic-login-via-cli",
+  "main": "./dist/index.js",
   "type": "module",
   "exports": {
     ".": {
       "import": "./dist/index.js",
       "types": "./dist/index.d.ts"
     },
+    "./server": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    },
     "./tui": {
       "import": "./dist/tui.js",
       "types": "./dist/tui.d.ts"
-    },
-    "./runtime": {
-      "import": "./dist/index.js",
-      "types": "./dist/index.d.ts"
     }
   },
   "files": [
@@ -75,6 +74,7 @@
     }
   },
   "engines": {
-    "node": ">=20.0.0"
+    "node": ">=20.0.0",
+    "opencode": "^1.0.0"
   }
 }
