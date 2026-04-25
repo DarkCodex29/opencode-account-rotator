@@ -69,7 +69,7 @@ import { z as z2 } from "zod";
 var CCS_INSTANCES_DIR = join2(homedir2(), ".ccs", "instances");
 var CREDENTIALS_FILENAME = ".credentials.json";
 var AUTH_JSON_PATH = join2(homedir2(), ".local", "share", "opencode", "auth.json");
-var CLAUDE_OAUTH_CLIENT_ID = "9d1c250a-e535-43e3-a1b1-68f1a5a8f740";
+var CLAUDE_OAUTH_CLIENT_ID = "9d1c250a-e61b-44d9-88ed-5944d1962f5e";
 var OAUTH_TOKEN_URL = "https://platform.claude.com/v1/oauth/token";
 var TOKEN_REFRESH_TIMEOUT_MS = 3e3;
 var credentialsSchema = z2.object({
@@ -647,33 +647,45 @@ function createAuthWatcher(opts) {
 }
 
 // src/health-check.ts
-var ANTHROPIC_MESSAGES_URL = "https://api.anthropic.com/v1/messages";
-var ANTHROPIC_API_VERSION = "2023-06-01";
-var PROBE_MODEL = "claude-haiku-4";
-var PROBE_MAX_TOKENS = 1;
+var CLAUDE_OAUTH_CLIENT_ID2 = "9d1c250a-e61b-44d9-88ed-5944d1962f5e";
+var OAUTH_TOKEN_URL2 = "https://platform.claude.com/v1/oauth/token";
 var PROBE_TIMEOUT_MS = 5e3;
 async function probeAccount(account) {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), PROBE_TIMEOUT_MS);
   try {
-    const response = await fetch(ANTHROPIC_MESSAGES_URL, {
+    const response = await fetch(OAUTH_TOKEN_URL2, {
       method: "POST",
       headers: {
-        "Authorization": `Bearer ${account.accessToken}`,
-        "anthropic-version": ANTHROPIC_API_VERSION,
         "content-type": "application/json"
       },
       body: JSON.stringify({
-        model: PROBE_MODEL,
-        max_tokens: PROBE_MAX_TOKENS,
-        messages: [{ role: "user", content: "hi" }]
+        grant_type: "refresh_token",
+        refresh_token: account.refreshToken,
+        client_id: CLAUDE_OAUTH_CLIENT_ID2
       }),
       signal: controller.signal
     });
     if (response.status === 200) {
+      try {
+        const data = await response.json();
+        if (data.access_token) {
+          account.accessToken = data.access_token;
+        }
+        if (data.refresh_token) {
+          account.refreshToken = data.refresh_token;
+        }
+        if (data.expires_in) {
+          account.expiresAt = Date.now() + data.expires_in * 1e3;
+        }
+      } catch {
+      }
       return "ready";
     }
     if (response.status === 429) {
+      return "unchecked";
+    }
+    if (response.status === 401 || response.status === 403) {
       return "exhausted";
     }
     console.warn(

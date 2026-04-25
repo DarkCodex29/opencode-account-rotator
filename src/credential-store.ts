@@ -30,7 +30,7 @@ export const AUTH_JSON_PATH = join(homedir(), ".local", "share", "opencode", "au
  * OAuth client ID used by the Claude Max CLI flow.
  * This matches what anthropic-login-via-cli uses.
  */
-const CLAUDE_OAUTH_CLIENT_ID = "9d1c250a-e535-43e3-a1b1-68f1a5a8f740"
+const CLAUDE_OAUTH_CLIENT_ID = "9d1c250a-e61b-44d9-88ed-5944d1962f5e"
 const OAUTH_TOKEN_URL = "https://platform.claude.com/v1/oauth/token"
 const TOKEN_REFRESH_TIMEOUT_MS = 3_000
 

@@ -504,7 +504,7 @@ import { z as z2 } from "zod";
 var CCS_INSTANCES_DIR = join2(homedir2(), ".ccs", "instances");
 var CREDENTIALS_FILENAME = ".credentials.json";
 var AUTH_JSON_PATH = join2(homedir2(), ".local", "share", "opencode", "auth.json");
-var CLAUDE_OAUTH_CLIENT_ID = "9d1c250a-e535-43e3-a1b1-68f1a5a8f740";
+var CLAUDE_OAUTH_CLIENT_ID = "9d1c250a-e61b-44d9-88ed-5944d1962f5e";
 var OAUTH_TOKEN_URL = "https://platform.claude.com/v1/oauth/token";
 var TOKEN_REFRESH_TIMEOUT_MS = 3e3;
 var credentialsSchema = z2.object({

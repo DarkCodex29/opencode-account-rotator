@@ -1,16 +1,18 @@
 /**
  * Health Check for opencode-account-rotator.
  *
- * Probes each CCS account against the Anthropic Messages API to determine
- * if the account's quota is available.
+ * IMPORTANT: OAuth tokens from Claude Max CANNOT be used directly against
+ * api.anthropic.com (returns 401 "OAuth authentication not supported").
+ * They only work through OpenCode's proxy layer.
  *
- * Uses OAuth Bearer auth (Claude Max OAuth), NOT x-api-key.
- * Sends the cheapest possible probe: claude-haiku-4, max_tokens=1.
+ * Strategy: Passive health check via token refresh.
+ * - If token refresh succeeds → account is "ready" (valid subscription)
+ * - If token refresh returns 403 → account is "exhausted" or suspended
+ * - If token refresh returns 429 → rate limited on refresh endpoint (mark "unchecked")
+ * - If timeout/error → "unknown"
  *
- * Result mapping:
- *   HTTP 200 → "ready"
- *   HTTP 429 → "exhausted"
- *   timeout / network error → "unknown"
+ * The REAL health status gets updated passively when the auth watcher
+ * detects the login plugin rotating away from an account (→ "exhausted").
  */
 
 import type { Account, HealthStatus } from "./types.js"
@@ -19,52 +21,77 @@ import type { Account, HealthStatus } from "./types.js"
 // Constants
 // ---------------------------------------------------------------------------
 
-const ANTHROPIC_MESSAGES_URL = "https://api.anthropic.com/v1/messages"
-const ANTHROPIC_API_VERSION = "2023-06-01"
-const PROBE_MODEL = "claude-haiku-4"
-const PROBE_MAX_TOKENS = 1
+/** OAuth client ID used by Claude Code CLI / anthropic-login-via-cli */
+const CLAUDE_OAUTH_CLIENT_ID = "9d1c250a-e61b-44d9-88ed-5944d1962f5e"
+const OAUTH_TOKEN_URL = "https://platform.claude.com/v1/oauth/token"
 const PROBE_TIMEOUT_MS = 5_000
 
 // ---------------------------------------------------------------------------
-// Single account probe (Task 3.1)
+// Single account probe
 // ---------------------------------------------------------------------------
 
 /**
- * Probes a single account against the Anthropic Messages API.
+ * Probes a single account by attempting a token refresh.
  *
- * - Uses `Authorization: Bearer {accessToken}` (OAuth, not x-api-key)
- * - Times out after 5 seconds via AbortController
- * - Returns "ready" (200), "exhausted" (429), or "unknown" (timeout/error)
+ * This validates that the account's subscription is active and the refresh
+ * token is valid. It does NOT consume message quota.
+ *
+ * Result mapping:
+ *   200 (refresh succeeds) → "ready"
+ *   403 (forbidden/suspended) → "exhausted"
+ *   429 (refresh rate limited) → "unchecked" (can't determine)
+ *   401 (invalid token) → "exhausted"
+ *   timeout / network error → "unknown"
  */
 export async function probeAccount(account: Account): Promise<HealthStatus> {
   const controller = new AbortController()
   const timer = setTimeout(() => controller.abort(), PROBE_TIMEOUT_MS)
 
   try {
-    const response = await fetch(ANTHROPIC_MESSAGES_URL, {
+    const response = await fetch(OAUTH_TOKEN_URL, {
       method: "POST",
       headers: {
-        "Authorization": `Bearer ${account.accessToken}`,
-        "anthropic-version": ANTHROPIC_API_VERSION,
         "content-type": "application/json",
       },
       body: JSON.stringify({
-        model: PROBE_MODEL,
-        max_tokens: PROBE_MAX_TOKENS,
-        messages: [{ role: "user", content: "hi" }],
+        grant_type: "refresh_token",
+        refresh_token: account.refreshToken,
+        client_id: CLAUDE_OAUTH_CLIENT_ID,
       }),
       signal: controller.signal,
     })
 
     if (response.status === 200) {
+      // Token refreshed successfully → subscription is active
+      // Update the account's tokens in memory (caller can persist if needed)
+      try {
+        const data = (await response.json()) as { access_token?: string; refresh_token?: string; expires_in?: number }
+        if (data.access_token) {
+          account.accessToken = data.access_token
+        }
+        if (data.refresh_token) {
+          account.refreshToken = data.refresh_token
+        }
+        if (data.expires_in) {
+          account.expiresAt = Date.now() + data.expires_in * 1000
+        }
+      } catch {
+        // JSON parse failed — still mark as ready since HTTP 200
+      }
       return "ready"
     }
 
     if (response.status === 429) {
+      // Refresh endpoint is rate-limited — can't determine health
+      return "unchecked"
+    }
+
+    if (response.status === 401 || response.status === 403) {
+      // Token invalid or account suspended
       return "exhausted"
     }
 
-    // Any other status (401, 403, 500, …) → treat as unknown
+    // Any other status → unknown
     console.warn(
       `[account-rotator] Health probe for "${account.name}" returned HTTP ${response.status} — marking unknown`
     )
@@ -86,7 +113,7 @@ export async function probeAccount(account: Account): Promise<HealthStatus> {
 }
 
 // ---------------------------------------------------------------------------
-// All accounts in parallel (Task 3.2)
+// All accounts in parallel
 // ---------------------------------------------------------------------------
 
 /**
