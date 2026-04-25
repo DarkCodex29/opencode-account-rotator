@@ -1,0 +1,53 @@
+{
+  "name": "opencode-account-rotator",
+  "version": "0.1.0",
+  "description": "OpenCode plugin that adds round-robin account rotation with cooldown tracking and TUI notifications on top of anthropic-login-via-cli",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "type": "module",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "files": ["dist", "README.md", "LICENSE"],
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "test": "echo \"No tests yet\" && exit 0",
+    "typecheck": "tsc --noEmit"
+  },
+  "keywords": [
+    "opencode",
+    "plugin",
+    "account-rotation",
+    "claude",
+    "anthropic"
+  ],
+  "author": "Gianpierre Mio",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/DarkCodex29/opencode-account-rotator"
+  },
+  "dependencies": {
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "tsup": "^8.0.0",
+    "typescript": "^5.5.0"
+  },
+  "peerDependencies": {
+    "@opencode-ai/plugin": "*"
+  },
+  "peerDependenciesMeta": {
+    "@opencode-ai/plugin": {
+      "optional": true
+    }
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  }
+}
