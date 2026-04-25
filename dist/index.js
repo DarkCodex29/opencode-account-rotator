@@ -545,6 +545,7 @@ var plugin = async (input) => {
       }
     };
   }
+  await saveState(engine.getState());
   notify(
     `\u2705 Account Rotator: loaded ${accounts.length} account(s) \u2014 ${accounts.map((a) => a.name).join(", ")}`,
     config.notifyOnRotation

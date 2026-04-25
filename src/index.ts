@@ -105,6 +105,9 @@ const plugin: Plugin = async (input: PluginInput): Promise<PluginHooks> => {
     }
   }
 
+  // --- Step 6: Write initial state so TUI can display accounts immediately ---
+  await saveState(engine.getState())
+
   notify(
     `✅ Account Rotator: loaded ${accounts.length} account(s) — ${accounts.map((a) => a.name).join(", ")}`,
     config.notifyOnRotation
