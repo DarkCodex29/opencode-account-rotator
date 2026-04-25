@@ -63,6 +63,8 @@ interface PersistedState {
     cooldowns: CooldownEntry[];
     /** Timestamp of the last rotation */
     lastRotation: number | null;
+    /** Health status per account name, as probed at startup */
+    healthStatuses?: Record<string, HealthStatus>;
 }
 /**
  * Full in-memory rotation state — extends persisted state with transient history.
@@ -111,6 +113,11 @@ interface ResolvedConfig {
  *                              └──→ exhausted ──→ idle (after wait)
  */
 type RotationStatus = "idle" | "detecting" | "rotating" | "cooldown" | "exhausted";
+/**
+ * Health status as reported by a startup probe against the Anthropic API.
+ * Written to state.json by the runtime plugin; read by the TUI.
+ */
+type HealthStatus = "ready" | "exhausted" | "unknown" | "unchecked";
 
 /**
  * Rotation Engine for opencode-account-rotator.
@@ -319,6 +326,7 @@ type PluginHooks = {
     event?: (context: {
         event: AnyEvent;
     }) => void | Promise<void>;
+    dispose?: () => void | Promise<void>;
 };
 type Plugin = (input: PluginInput) => PluginHooks | Promise<PluginHooks>;
 declare const plugin: Plugin;

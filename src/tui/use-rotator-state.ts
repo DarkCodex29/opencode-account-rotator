@@ -22,13 +22,15 @@ import { emptyTuiState } from "./types.js"
 
 /**
  * Derives an AccountDisplayStatus from the persisted state for a given account.
+ * Health statuses from startup probes take precedence over "ready" fallback.
  */
 function deriveStatus(
   name: string,
   activeAccount: string | null,
   cooldowns: PersistedState["cooldowns"],
   disabledNames: Set<string>,
-  now: number
+  now: number,
+  healthStatuses: Record<string, string>
 ): AccountDisplayStatus {
   if (disabledNames.has(name)) return "disabled"
   if (name === activeAccount) return "active"
@@ -36,8 +38,13 @@ function deriveStatus(
   const cooldown = cooldowns.find((c) => c.account === name)
   if (cooldown) {
     if (cooldown.until > now) return "cooldown"
-    // Cooldown expired — treat as ready
+    // Cooldown expired — fall through to health status check
   }
+
+  // FIX-2: Use health probe result from runtime if available
+  const health = healthStatuses[name]
+  if (health === "exhausted") return "exhausted"
+  if (health === "unknown") return "unknown"
 
   return "ready"
 }
@@ -47,6 +54,7 @@ function deriveStatus(
  */
 function deriveState(raw: PersistedState): TuiState {
   const now = Date.now()
+  const healthStatuses = raw.healthStatuses ?? {}
 
   const accounts: AccountDisplay[] = raw.accounts.map((name) => {
     const cooldown = raw.cooldowns.find((c) => c.account === name)
@@ -58,7 +66,8 @@ function deriveState(raw: PersistedState): TuiState {
       raw.activeAccount,
       raw.cooldowns,
       new Set<string>(), // disabled accounts not tracked in PersistedState; extend later
-      now
+      now,
+      healthStatuses
     )
 
     return {
@@ -73,7 +82,7 @@ function deriveState(raw: PersistedState): TuiState {
   const isExhausted =
     accounts.length > 0 &&
     accounts.every(
-      (a) => a.status === "cooldown" || a.status === "expired" || a.status === "disabled"
+      (a) => a.status === "cooldown" || a.status === "expired" || a.status === "disabled" || a.status === "exhausted"
     )
 
   return {
@@ -83,6 +92,7 @@ function deriveState(raw: PersistedState): TuiState {
     history: [], // PersistedState does not include history — in-memory only
     updatedAt: new Date().toISOString(),
     isExhausted,
+    healthStatuses,
   }
 }
 
@@ -111,7 +121,20 @@ function parsePersistedState(content: string): PersistedState | null {
       return null
     }
 
-    return {
+    // Parse healthStatuses — optional Record<string, string>
+    let healthStatuses: Record<string, import("../types.js").HealthStatus> | undefined
+    const rawHealth = obj["healthStatuses"]
+    if (rawHealth !== null && typeof rawHealth === "object" && !Array.isArray(rawHealth)) {
+      healthStatuses = {}
+      const validStatuses = new Set(["ready", "exhausted", "unknown", "unchecked"])
+      for (const [k, v] of Object.entries(rawHealth as Record<string, unknown>)) {
+        if (typeof v === "string" && validStatuses.has(v)) {
+          healthStatuses[k] = v as import("../types.js").HealthStatus
+        }
+      }
+    }
+
+    const parsed: PersistedState = {
       activeAccount:
         typeof obj["activeAccount"] === "string" ? obj["activeAccount"] : null,
       accounts: (obj["accounts"] as unknown[]).filter(
@@ -132,6 +155,11 @@ function parsePersistedState(content: string): PersistedState | null {
       lastRotation:
         typeof obj["lastRotation"] === "number" ? obj["lastRotation"] : null,
     }
+    // Only set optional field if it was parsed — satisfies exactOptionalPropertyTypes
+    if (healthStatuses !== undefined) {
+      parsed.healthStatuses = healthStatuses
+    }
+    return parsed
   } catch {
     return null
   }

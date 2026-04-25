@@ -68,6 +68,7 @@ import { join as join2 } from "path";
 import { z as z2 } from "zod";
 var CCS_INSTANCES_DIR = join2(homedir2(), ".ccs", "instances");
 var CREDENTIALS_FILENAME = ".credentials.json";
+var AUTH_JSON_PATH = join2(homedir2(), ".local", "share", "opencode", "auth.json");
 var CLAUDE_OAUTH_CLIENT_ID = "9d1c250a-e535-43e3-a1b1-68f1a5a8f740";
 var OAUTH_TOKEN_URL = "https://platform.claude.com/v1/oauth/token";
 var TOKEN_REFRESH_TIMEOUT_MS = 3e3;
@@ -190,6 +191,37 @@ async function refreshAccountToken(account) {
     return account;
   } finally {
     clearTimeout(timer);
+  }
+}
+async function readAuthJson() {
+  try {
+    const content = await readFile2(AUTH_JSON_PATH, "utf-8");
+    const raw = JSON.parse(content);
+    if (raw === null || typeof raw !== "object" || Array.isArray(raw)) {
+      return null;
+    }
+    const obj = raw;
+    const anthropic = obj["anthropic"];
+    if (anthropic === null || typeof anthropic !== "object" || Array.isArray(anthropic)) {
+      return null;
+    }
+    const a = anthropic;
+    if (typeof a["access"] !== "string" || typeof a["refresh"] !== "string" || typeof a["expires"] !== "number") {
+      return null;
+    }
+    return {
+      access: a["access"],
+      refresh: a["refresh"],
+      expires: a["expires"]
+    };
+  } catch (err) {
+    if (isNodeError2(err) && err.code === "ENOENT") {
+      return null;
+    }
+    console.warn(
+      `[account-rotator] Failed to read auth.json at ${AUTH_JSON_PATH}: ${String(err)}`
+    );
+    return null;
   }
 }
 function isNodeError2(err) {
@@ -457,12 +489,14 @@ var cooldownEntrySchema = z3.object({
   until: z3.number().int().nonnegative(),
   reason: z3.enum(["429", "401", "refresh-failed"])
 });
+var healthStatusSchema = z3.enum(["ready", "exhausted", "unknown", "unchecked"]);
 var persistedStateSchema = z3.object({
   activeAccount: z3.string().nullable(),
   accounts: z3.array(z3.string()),
   rotationIndex: z3.number().int().nonnegative(),
   cooldowns: z3.array(cooldownEntrySchema),
-  lastRotation: z3.number().int().nullable()
+  lastRotation: z3.number().int().nullable(),
+  healthStatuses: z3.record(z3.string(), healthStatusSchema).optional()
 });
 function defaultState() {
   return {
@@ -470,7 +504,8 @@ function defaultState() {
     accounts: [],
     rotationIndex: 0,
     cooldowns: [],
-    lastRotation: null
+    lastRotation: null,
+    healthStatuses: {}
   };
 }
 async function loadState() {
@@ -495,7 +530,18 @@ async function loadState() {
     );
     return defaultState();
   }
-  return result.data;
+  const parsed = result.data;
+  const state = {
+    activeAccount: parsed.activeAccount,
+    accounts: parsed.accounts,
+    rotationIndex: parsed.rotationIndex,
+    cooldowns: parsed.cooldowns,
+    lastRotation: parsed.lastRotation
+  };
+  if (parsed.healthStatuses !== void 0) {
+    state.healthStatuses = parsed.healthStatuses;
+  }
+  return state;
 }
 async function saveState(state) {
   const payload = {
@@ -503,7 +549,8 @@ async function saveState(state) {
     accounts: state.accounts,
     rotationIndex: state.rotationIndex,
     cooldowns: state.cooldowns,
-    lastRotation: state.lastRotation
+    lastRotation: state.lastRotation,
+    healthStatuses: state.healthStatuses ?? {}
   };
   const tmpPath = STATE_PATH + ".tmp";
   try {
@@ -518,6 +565,147 @@ async function saveState(state) {
 }
 function isNodeError3(err) {
   return err instanceof Error && "code" in err;
+}
+
+// src/auth-watcher.ts
+import { watch } from "fs";
+function matchTokenToAccount(accessToken, accounts) {
+  const match = accounts.find((a) => a.accessToken === accessToken);
+  return match?.name ?? null;
+}
+function createAuthWatcher(opts) {
+  const { accounts, onAccountChanged } = opts;
+  let currentAccount = null;
+  let debounceTimer = null;
+  let watcher = null;
+  const handleChange = () => {
+    if (debounceTimer !== null) {
+      clearTimeout(debounceTimer);
+    }
+    debounceTimer = setTimeout(() => {
+      debounceTimer = null;
+      void processAuthChange();
+    }, 500);
+  };
+  const processAuthChange = async () => {
+    const authData = await readAuthJson();
+    if (authData === null) {
+      console.warn(
+        "[account-rotator] auth.json is absent or unreadable \u2014 preserving last known active account"
+      );
+      return;
+    }
+    const matched = matchTokenToAccount(authData.access, accounts);
+    if (matched !== currentAccount) {
+      currentAccount = matched;
+      try {
+        await onAccountChanged(matched);
+      } catch (err) {
+        console.warn(
+          `[account-rotator] auth-watcher callback error: ${String(err)}`
+        );
+      }
+    }
+  };
+  try {
+    watcher = watch(AUTH_JSON_PATH, { persistent: false }, (eventType) => {
+      if (eventType === "change" || eventType === "rename") {
+        handleChange();
+      }
+    });
+    watcher.on("error", (err) => {
+      const nodeErr = err;
+      if (nodeErr.code === "ENOENT") {
+        console.warn("[account-rotator] auth.json watcher: file not found \u2014 watching parent dir");
+      } else {
+        console.warn(`[account-rotator] auth.json watcher error: ${String(err)}`);
+      }
+    });
+  } catch (err) {
+    const nodeErr = err;
+    if (nodeErr.code === "ENOENT") {
+      console.warn(
+        `[account-rotator] auth.json not found at ${AUTH_JSON_PATH} \u2014 watcher inactive until file is created`
+      );
+    } else {
+      console.warn(`[account-rotator] Failed to start auth watcher: ${String(err)}`);
+    }
+  }
+  return {
+    getCurrentAccount() {
+      return currentAccount;
+    },
+    close() {
+      if (debounceTimer !== null) {
+        clearTimeout(debounceTimer);
+        debounceTimer = null;
+      }
+      watcher?.close();
+      watcher = null;
+    }
+  };
+}
+
+// src/health-check.ts
+var ANTHROPIC_MESSAGES_URL = "https://api.anthropic.com/v1/messages";
+var ANTHROPIC_API_VERSION = "2023-06-01";
+var PROBE_MODEL = "claude-haiku-4";
+var PROBE_MAX_TOKENS = 1;
+var PROBE_TIMEOUT_MS = 5e3;
+async function probeAccount(account) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), PROBE_TIMEOUT_MS);
+  try {
+    const response = await fetch(ANTHROPIC_MESSAGES_URL, {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${account.accessToken}`,
+        "anthropic-version": ANTHROPIC_API_VERSION,
+        "content-type": "application/json"
+      },
+      body: JSON.stringify({
+        model: PROBE_MODEL,
+        max_tokens: PROBE_MAX_TOKENS,
+        messages: [{ role: "user", content: "hi" }]
+      }),
+      signal: controller.signal
+    });
+    if (response.status === 200) {
+      return "ready";
+    }
+    if (response.status === 429) {
+      return "exhausted";
+    }
+    console.warn(
+      `[account-rotator] Health probe for "${account.name}" returned HTTP ${response.status} \u2014 marking unknown`
+    );
+    return "unknown";
+  } catch (err) {
+    if (isAbortError2(err)) {
+      console.warn(
+        `[account-rotator] Health probe timed out for "${account.name}" \u2014 marking unknown`
+      );
+    } else {
+      console.warn(
+        `[account-rotator] Health probe error for "${account.name}": ${String(err)} \u2014 marking unknown`
+      );
+    }
+    return "unknown";
+  } finally {
+    clearTimeout(timer);
+  }
+}
+async function probeAllAccounts(accounts) {
+  const results = await Promise.all(
+    accounts.map(async (account) => {
+      const status = await probeAccount(account);
+      return [account.name, status];
+    })
+  );
+  return new Map(results);
+}
+function isAbortError2(err) {
+  return err instanceof Error && (err.name === "AbortError" || err.name === "TimeoutError");
 }
 
 // src/index.ts
@@ -545,12 +733,61 @@ var plugin = async (input) => {
       }
     };
   }
+  const authData = await readAuthJson();
+  if (authData !== null) {
+    const matchedName = matchTokenToAccount(authData.access, accounts);
+    if (matchedName !== null) {
+      engine.restoreState({ activeAccount: matchedName });
+      notify(
+        `[account-rotator] Startup auth sync: active account set to "${matchedName}"`,
+        config.notifyOnRotation
+      );
+    } else {
+      console.warn(
+        "[account-rotator] Startup auth sync: auth.json token does not match any known CCS account"
+      );
+    }
+  }
   await saveState(engine.getState());
+  void (async () => {
+    try {
+      const healthMap = await probeAllAccounts(accounts);
+      const currentState = engine.getState();
+      const healthStatuses = {};
+      for (const [name, status] of healthMap) {
+        healthStatuses[name] = status;
+      }
+      await saveState({ ...currentState, healthStatuses });
+      notify(
+        `[account-rotator] Health check complete: ${JSON.stringify(healthStatuses)}`,
+        config.notifyOnRotation
+      );
+    } catch (err) {
+      console.warn(`[account-rotator] Health check error: ${String(err)}`);
+    }
+  })();
+  const authWatcher = createAuthWatcher({
+    accounts,
+    onAccountChanged: async (accountName) => {
+      const currentState = engine.getState();
+      if (accountName !== currentState.activeAccount) {
+        engine.restoreState({ activeAccount: accountName });
+        await saveState(engine.getState());
+        notify(
+          `[account-rotator] Auth watcher: active account changed to "${accountName ?? "null"}"`,
+          config.notifyOnRotation
+        );
+      }
+    }
+  });
   notify(
     `\u2705 Account Rotator: loaded ${accounts.length} account(s) \u2014 ${accounts.map((a) => a.name).join(", ")}`,
     config.notifyOnRotation
   );
   return {
+    dispose: () => {
+      authWatcher.close();
+    },
     event: async ({ event }) => {
       if (event.type !== "session.error") return;
       const err = event.properties?.error;

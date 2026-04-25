@@ -12,7 +12,7 @@ import { readFile, writeFile, rename, mkdir } from "node:fs/promises"
 import { homedir } from "node:os"
 import { join, dirname } from "node:path"
 import { z } from "zod"
-import type { PersistedState } from "./types.js"
+import type { PersistedState, HealthStatus } from "./types.js"
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -35,12 +35,15 @@ const cooldownEntrySchema = z.object({
   reason: z.enum(["429", "401", "refresh-failed"]),
 })
 
+const healthStatusSchema = z.enum(["ready", "exhausted", "unknown", "unchecked"])
+
 const persistedStateSchema = z.object({
   activeAccount: z.string().nullable(),
   accounts: z.array(z.string()),
   rotationIndex: z.number().int().nonnegative(),
   cooldowns: z.array(cooldownEntrySchema),
   lastRotation: z.number().int().nullable(),
+  healthStatuses: z.record(z.string(), healthStatusSchema).optional(),
 })
 
 // ---------------------------------------------------------------------------
@@ -54,6 +57,7 @@ function defaultState(): PersistedState {
     rotationIndex: 0,
     cooldowns: [],
     lastRotation: null,
+    healthStatuses: {},
   }
 }
 
@@ -93,7 +97,19 @@ export async function loadState(): Promise<PersistedState> {
     return defaultState()
   }
 
-  return result.data
+  // Strip undefined optional fields to satisfy exactOptionalPropertyTypes
+  const parsed = result.data
+  const state: PersistedState = {
+    activeAccount: parsed.activeAccount,
+    accounts: parsed.accounts,
+    rotationIndex: parsed.rotationIndex,
+    cooldowns: parsed.cooldowns,
+    lastRotation: parsed.lastRotation,
+  }
+  if (parsed.healthStatuses !== undefined) {
+    state.healthStatuses = parsed.healthStatuses
+  }
+  return state
 }
 
 /**
@@ -109,6 +125,7 @@ export async function saveState(state: PersistedState): Promise<void> {
     rotationIndex: state.rotationIndex,
     cooldowns: state.cooldowns,
     lastRotation: state.lastRotation,
+    healthStatuses: state.healthStatuses ?? {},
   }
 
   const tmpPath = STATE_PATH + ".tmp"

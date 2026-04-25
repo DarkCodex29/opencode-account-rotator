@@ -21,6 +21,12 @@ const CCS_INSTANCES_DIR = join(homedir(), ".ccs", "instances")
 const CREDENTIALS_FILENAME = ".credentials.json"
 
 /**
+ * Absolute path to the OpenCode auth.json file written by the login plugin.
+ * Shape: { anthropic: { type, access, refresh, expires } }
+ */
+export const AUTH_JSON_PATH = join(homedir(), ".local", "share", "opencode", "auth.json")
+
+/**
  * OAuth client ID used by the Claude Max CLI flow.
  * This matches what anthropic-login-via-cli uses.
  */
@@ -224,6 +230,70 @@ export async function refreshAccountToken(account: Account): Promise<Account> {
     return account
   } finally {
     clearTimeout(timer)
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Auth.json reader (FIX-4: startup auth sync)
+// ---------------------------------------------------------------------------
+
+/**
+ * Reads and parses ~/.local/share/opencode/auth.json.
+ *
+ * Returns the Anthropic OAuth tokens, or null if the file is absent,
+ * unreadable, or has an unexpected shape. Never throws.
+ */
+export async function readAuthJson(): Promise<{
+  access: string
+  refresh: string
+  expires: number
+} | null> {
+  try {
+    const content = await readFile(AUTH_JSON_PATH, "utf-8")
+    const raw = JSON.parse(content) as unknown
+
+    if (
+      raw === null ||
+      typeof raw !== "object" ||
+      Array.isArray(raw)
+    ) {
+      return null
+    }
+
+    const obj = raw as Record<string, unknown>
+    const anthropic = obj["anthropic"]
+
+    if (
+      anthropic === null ||
+      typeof anthropic !== "object" ||
+      Array.isArray(anthropic)
+    ) {
+      return null
+    }
+
+    const a = anthropic as Record<string, unknown>
+    if (
+      typeof a["access"] !== "string" ||
+      typeof a["refresh"] !== "string" ||
+      typeof a["expires"] !== "number"
+    ) {
+      return null
+    }
+
+    return {
+      access: a["access"] as string,
+      refresh: a["refresh"] as string,
+      expires: a["expires"] as number,
+    }
+  } catch (err) {
+    if (isNodeError(err) && err.code === "ENOENT") {
+      // File doesn't exist yet — not an error
+      return null
+    }
+    console.warn(
+      `[account-rotator] Failed to read auth.json at ${AUTH_JSON_PATH}: ${String(err)}`
+    )
+    return null
   }
 }
 

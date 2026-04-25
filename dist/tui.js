@@ -24,6 +24,10 @@ function statusEmoji(status) {
       return "\u{1F534}";
     case "disabled":
       return "\u26AB";
+    case "exhausted":
+      return "\u{1F534}";
+    case "unknown":
+      return "\u{1F7E1}";
   }
 }
 function statusLabel(status) {
@@ -38,6 +42,10 @@ function statusLabel(status) {
       return "expired";
     case "disabled":
       return "disabled";
+    case "exhausted":
+      return "exhausted";
+    case "unknown":
+      return "unknown";
   }
 }
 function formatCountdown(remainingMs) {
@@ -78,6 +86,10 @@ function SidebarPanel(props) {
           return props.theme["warning"] ?? "yellow";
         case "disabled":
           return props.theme["textMuted"] ?? "gray";
+        case "exhausted":
+          return props.theme["error"] ?? "red";
+        case "unknown":
+          return props.theme["warning"] ?? "yellow";
       }
     };
     return (() => {
@@ -255,71 +267,75 @@ function FooterBadge(props) {
     return ` ${formatCountdown2(shortest)}`;
   });
   const visible = createMemo2(() => props.state().accounts.length > 0);
-  return _$createComponent2(Show2, {
-    get when() {
-      return visible();
-    },
-    get children() {
-      var _el$ = _$createElement2("box");
-      _$setProp2(_el$, "paddingLeft", 1);
-      _$setProp2(_el$, "paddingRight", 1);
-      _$insert2(_el$, _$createComponent2(Show2, {
-        get when() {
-          return _$memo2(() => !!!isExhausted())() && activeAccount() !== null;
-        },
-        get fallback() {
-          return (() => {
-            var _el$12 = _$createElement2("box"), _el$13 = _$createElement2("text");
-            _$insertNode2(_el$12, _el$13);
-            _$setProp2(_el$12, "flexDirection", "row");
-            _$insertNode2(_el$13, _$createTextNode2(`\u26A0 No active account`));
-            _$effect2((_$p) => _$setProp2(_el$13, "fg", props.theme["warning"] ?? "yellow", _$p));
-            return _el$12;
-          })();
-        },
-        get children() {
-          var _el$2 = _$createElement2("box"), _el$3 = _$createElement2("text"), _el$4 = _$createTextNode2(`\u26A1 `), _el$5 = _$createElement2("text"), _el$6 = _$createTextNode2(` (`), _el$8 = _$createTextNode2(` ready`), _el$10 = _$createElement2("text");
-          _$insertNode2(_el$2, _el$3);
-          _$insertNode2(_el$2, _el$5);
-          _$insertNode2(_el$2, _el$10);
-          _$setProp2(_el$2, "flexDirection", "row");
-          _$insertNode2(_el$3, _el$4);
-          _$insert2(_el$3, activeAccount, null);
-          _$insertNode2(_el$5, _el$6);
-          _$insertNode2(_el$5, _el$8);
-          _$insert2(_el$5, readyCount, _el$8);
-          _$insert2(_el$2, _$createComponent2(Show2, {
-            get when() {
-              return cooldownCount() > 0;
-            },
-            get children() {
-              var _el$9 = _$createElement2("text"), _el$0 = _$createTextNode2(` \xB7 `), _el$1 = _$createTextNode2(` cooldown`);
-              _$insertNode2(_el$9, _el$0);
-              _$insertNode2(_el$9, _el$1);
-              _$insert2(_el$9, cooldownCount, _el$1);
-              _$insert2(_el$9, shortestCooldownText, null);
-              _$effect2((_$p) => _$setProp2(_el$9, "fg", props.theme["textMuted"] ?? "gray", _$p));
-              return _el$9;
-            }
-          }), _el$10);
-          _$insertNode2(_el$10, _$createTextNode2(`)`));
-          _$effect2((_p$) => {
-            var _v$ = props.theme["success"] ?? "green", _v$2 = props.theme["textMuted"] ?? "gray", _v$3 = props.theme["textMuted"] ?? "gray";
-            _v$ !== _p$.e && (_p$.e = _$setProp2(_el$3, "fg", _v$, _p$.e));
-            _v$2 !== _p$.t && (_p$.t = _$setProp2(_el$5, "fg", _v$2, _p$.t));
-            _v$3 !== _p$.a && (_p$.a = _$setProp2(_el$10, "fg", _v$3, _p$.a));
-            return _p$;
-          }, {
-            e: void 0,
-            t: void 0,
-            a: void 0
-          });
-          return _el$2;
-        }
-      }));
-      return _el$;
-    }
-  });
+  return (() => {
+    var _el$ = _$createElement2("box");
+    _$insert2(_el$, _$createComponent2(Show2, {
+      get when() {
+        return visible();
+      },
+      get children() {
+        var _el$2 = _$createElement2("box");
+        _$setProp2(_el$2, "paddingLeft", 1);
+        _$setProp2(_el$2, "paddingRight", 1);
+        _$insert2(_el$2, _$createComponent2(Show2, {
+          get when() {
+            return _$memo2(() => !!!isExhausted())() && activeAccount() !== null;
+          },
+          get fallback() {
+            return (() => {
+              var _el$13 = _$createElement2("box"), _el$14 = _$createElement2("text");
+              _$insertNode2(_el$13, _el$14);
+              _$setProp2(_el$13, "flexDirection", "row");
+              _$insertNode2(_el$14, _$createTextNode2(`\u26A0 No active account`));
+              _$effect2((_$p) => _$setProp2(_el$14, "fg", props.theme["warning"] ?? "yellow", _$p));
+              return _el$13;
+            })();
+          },
+          get children() {
+            var _el$3 = _$createElement2("box"), _el$4 = _$createElement2("text"), _el$5 = _$createTextNode2(`\u26A1 `), _el$6 = _$createElement2("text"), _el$7 = _$createTextNode2(` (`), _el$9 = _$createTextNode2(` ready`), _el$11 = _$createElement2("text");
+            _$insertNode2(_el$3, _el$4);
+            _$insertNode2(_el$3, _el$6);
+            _$insertNode2(_el$3, _el$11);
+            _$setProp2(_el$3, "flexDirection", "row");
+            _$insertNode2(_el$4, _el$5);
+            _$insert2(_el$4, activeAccount, null);
+            _$insertNode2(_el$6, _el$7);
+            _$insertNode2(_el$6, _el$9);
+            _$insert2(_el$6, readyCount, _el$9);
+            _$insert2(_el$3, _$createComponent2(Show2, {
+              get when() {
+                return cooldownCount() > 0;
+              },
+              get children() {
+                var _el$0 = _$createElement2("text"), _el$1 = _$createTextNode2(` \xB7 `), _el$10 = _$createTextNode2(` cooldown`);
+                _$insertNode2(_el$0, _el$1);
+                _$insertNode2(_el$0, _el$10);
+                _$insert2(_el$0, cooldownCount, _el$10);
+                _$insert2(_el$0, shortestCooldownText, null);
+                _$effect2((_$p) => _$setProp2(_el$0, "fg", props.theme["textMuted"] ?? "gray", _$p));
+                return _el$0;
+              }
+            }), _el$11);
+            _$insertNode2(_el$11, _$createTextNode2(`)`));
+            _$effect2((_p$) => {
+              var _v$ = props.theme["success"] ?? "green", _v$2 = props.theme["textMuted"] ?? "gray", _v$3 = props.theme["textMuted"] ?? "gray";
+              _v$ !== _p$.e && (_p$.e = _$setProp2(_el$4, "fg", _v$, _p$.e));
+              _v$2 !== _p$.t && (_p$.t = _$setProp2(_el$6, "fg", _v$2, _p$.t));
+              _v$3 !== _p$.a && (_p$.a = _$setProp2(_el$11, "fg", _v$3, _p$.a));
+              return _p$;
+            }, {
+              e: void 0,
+              t: void 0,
+              a: void 0
+            });
+            return _el$3;
+          }
+        }));
+        return _el$2;
+      }
+    }));
+    return _el$;
+  })();
 }
 
 // src/tui/use-rotator-state.ts
@@ -342,12 +358,14 @@ var cooldownEntrySchema = z.object({
   until: z.number().int().nonnegative(),
   reason: z.enum(["429", "401", "refresh-failed"])
 });
+var healthStatusSchema = z.enum(["ready", "exhausted", "unknown", "unchecked"]);
 var persistedStateSchema = z.object({
   activeAccount: z.string().nullable(),
   accounts: z.array(z.string()),
   rotationIndex: z.number().int().nonnegative(),
   cooldowns: z.array(cooldownEntrySchema),
-  lastRotation: z.number().int().nullable()
+  lastRotation: z.number().int().nullable(),
+  healthStatuses: z.record(z.string(), healthStatusSchema).optional()
 });
 
 // src/tui/types.ts
@@ -358,22 +376,27 @@ function emptyTuiState() {
     lastRotation: null,
     history: [],
     updatedAt: (/* @__PURE__ */ new Date()).toISOString(),
-    isExhausted: false
+    isExhausted: false,
+    healthStatuses: {}
   };
 }
 
 // src/tui/use-rotator-state.ts
-function deriveStatus(name, activeAccount, cooldowns, disabledNames, now) {
+function deriveStatus(name, activeAccount, cooldowns, disabledNames, now, healthStatuses) {
   if (disabledNames.has(name)) return "disabled";
   if (name === activeAccount) return "active";
   const cooldown = cooldowns.find((c) => c.account === name);
   if (cooldown) {
     if (cooldown.until > now) return "cooldown";
   }
+  const health = healthStatuses[name];
+  if (health === "exhausted") return "exhausted";
+  if (health === "unknown") return "unknown";
   return "ready";
 }
 function deriveState(raw) {
   const now = Date.now();
+  const healthStatuses = raw.healthStatuses ?? {};
   const accounts = raw.accounts.map((name) => {
     const cooldown = raw.cooldowns.find((c) => c.account === name);
     const cooldownUntil = cooldown && cooldown.until > now ? cooldown.until : null;
@@ -383,7 +406,8 @@ function deriveState(raw) {
       raw.cooldowns,
       /* @__PURE__ */ new Set(),
       // disabled accounts not tracked in PersistedState; extend later
-      now
+      now,
+      healthStatuses
     );
     return {
       name,
@@ -393,7 +417,7 @@ function deriveState(raw) {
     };
   });
   const isExhausted = accounts.length > 0 && accounts.every(
-    (a) => a.status === "cooldown" || a.status === "expired" || a.status === "disabled"
+    (a) => a.status === "cooldown" || a.status === "expired" || a.status === "disabled" || a.status === "exhausted"
   );
   return {
     accounts,
@@ -402,7 +426,8 @@ function deriveState(raw) {
     history: [],
     // PersistedState does not include history — in-memory only
     updatedAt: (/* @__PURE__ */ new Date()).toISOString(),
-    isExhausted
+    isExhausted,
+    healthStatuses
   };
 }
 function parsePersistedState(content) {
@@ -415,7 +440,18 @@ function parsePersistedState(content) {
     if (!Array.isArray(obj["accounts"]) || !Array.isArray(obj["cooldowns"])) {
       return null;
     }
-    return {
+    let healthStatuses;
+    const rawHealth = obj["healthStatuses"];
+    if (rawHealth !== null && typeof rawHealth === "object" && !Array.isArray(rawHealth)) {
+      healthStatuses = {};
+      const validStatuses = /* @__PURE__ */ new Set(["ready", "exhausted", "unknown", "unchecked"]);
+      for (const [k, v] of Object.entries(rawHealth)) {
+        if (typeof v === "string" && validStatuses.has(v)) {
+          healthStatuses[k] = v;
+        }
+      }
+    }
+    const parsed = {
       activeAccount: typeof obj["activeAccount"] === "string" ? obj["activeAccount"] : null,
       accounts: obj["accounts"].filter(
         (a) => typeof a === "string"
@@ -426,6 +462,10 @@ function parsePersistedState(content) {
       ) : [],
       lastRotation: typeof obj["lastRotation"] === "number" ? obj["lastRotation"] : null
     };
+    if (healthStatuses !== void 0) {
+      parsed.healthStatuses = healthStatuses;
+    }
+    return parsed;
   } catch {
     return null;
   }
@@ -463,6 +503,7 @@ import { join as join2 } from "path";
 import { z as z2 } from "zod";
 var CCS_INSTANCES_DIR = join2(homedir2(), ".ccs", "instances");
 var CREDENTIALS_FILENAME = ".credentials.json";
+var AUTH_JSON_PATH = join2(homedir2(), ".local", "share", "opencode", "auth.json");
 var CLAUDE_OAUTH_CLIENT_ID = "9d1c250a-e535-43e3-a1b1-68f1a5a8f740";
 var OAUTH_TOKEN_URL = "https://platform.claude.com/v1/oauth/token";
 var TOKEN_REFRESH_TIMEOUT_MS = 3e3;
@@ -562,6 +603,37 @@ async function refreshAccountToken(account) {
     clearTimeout(timer);
   }
 }
+async function readAuthJson() {
+  try {
+    const content = await readFile3(AUTH_JSON_PATH, "utf-8");
+    const raw = JSON.parse(content);
+    if (raw === null || typeof raw !== "object" || Array.isArray(raw)) {
+      return null;
+    }
+    const obj = raw;
+    const anthropic = obj["anthropic"];
+    if (anthropic === null || typeof anthropic !== "object" || Array.isArray(anthropic)) {
+      return null;
+    }
+    const a = anthropic;
+    if (typeof a["access"] !== "string" || typeof a["refresh"] !== "string" || typeof a["expires"] !== "number") {
+      return null;
+    }
+    return {
+      access: a["access"],
+      refresh: a["refresh"],
+      expires: a["expires"]
+    };
+  } catch (err) {
+    if (isNodeError(err) && err.code === "ENOENT") {
+      return null;
+    }
+    console.warn(
+      `[account-rotator] Failed to read auth.json at ${AUTH_JSON_PATH}: ${String(err)}`
+    );
+    return null;
+  }
+}
 function isNodeError(err) {
   return err instanceof Error && "code" in err;
 }
@@ -570,6 +642,85 @@ function isAbortError(err) {
 }
 function isTokenExpired(account, bufferMs = 6e4) {
   return account.expiresAt - Date.now() < bufferMs;
+}
+
+// src/auth-watcher.ts
+import { watch } from "fs";
+function matchTokenToAccount(accessToken, accounts) {
+  const match = accounts.find((a) => a.accessToken === accessToken);
+  return match?.name ?? null;
+}
+function createAuthWatcher(opts) {
+  const { accounts, onAccountChanged } = opts;
+  let currentAccount = null;
+  let debounceTimer = null;
+  let watcher = null;
+  const handleChange = () => {
+    if (debounceTimer !== null) {
+      clearTimeout(debounceTimer);
+    }
+    debounceTimer = setTimeout(() => {
+      debounceTimer = null;
+      void processAuthChange();
+    }, 500);
+  };
+  const processAuthChange = async () => {
+    const authData = await readAuthJson();
+    if (authData === null) {
+      console.warn(
+        "[account-rotator] auth.json is absent or unreadable \u2014 preserving last known active account"
+      );
+      return;
+    }
+    const matched = matchTokenToAccount(authData.access, accounts);
+    if (matched !== currentAccount) {
+      currentAccount = matched;
+      try {
+        await onAccountChanged(matched);
+      } catch (err) {
+        console.warn(
+          `[account-rotator] auth-watcher callback error: ${String(err)}`
+        );
+      }
+    }
+  };
+  try {
+    watcher = watch(AUTH_JSON_PATH, { persistent: false }, (eventType) => {
+      if (eventType === "change" || eventType === "rename") {
+        handleChange();
+      }
+    });
+    watcher.on("error", (err) => {
+      const nodeErr = err;
+      if (nodeErr.code === "ENOENT") {
+        console.warn("[account-rotator] auth.json watcher: file not found \u2014 watching parent dir");
+      } else {
+        console.warn(`[account-rotator] auth.json watcher error: ${String(err)}`);
+      }
+    });
+  } catch (err) {
+    const nodeErr = err;
+    if (nodeErr.code === "ENOENT") {
+      console.warn(
+        `[account-rotator] auth.json not found at ${AUTH_JSON_PATH} \u2014 watcher inactive until file is created`
+      );
+    } else {
+      console.warn(`[account-rotator] Failed to start auth watcher: ${String(err)}`);
+    }
+  }
+  return {
+    getCurrentAccount() {
+      return currentAccount;
+    },
+    close() {
+      if (debounceTimer !== null) {
+        clearTimeout(debounceTimer);
+        debounceTimer = null;
+      }
+      watcher?.close();
+      watcher = null;
+    }
+  };
 }
 
 // src/tui.tsx
@@ -583,6 +734,19 @@ var tui = async (api) => {
     state,
     refresh
   } = useRotatorState();
+  try {
+    const discoveredAccounts = await discover();
+    const tuiWatcher = createAuthWatcher({
+      accounts: discoveredAccounts,
+      onAccountChanged: (_accountName) => {
+        void refresh();
+      }
+    });
+    api.lifecycle.onDispose(() => {
+      tuiWatcher.close();
+    });
+  } catch {
+  }
   let lastActiveAccount = null;
   let wasExhausted = false;
   const recoveredAccounts = /* @__PURE__ */ new Set();

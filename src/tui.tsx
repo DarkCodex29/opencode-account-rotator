@@ -14,6 +14,7 @@ import { SidebarPanel } from "./tui/SidebarPanel.js"
 import { FooterBadge } from "./tui/FooterBadge.js"
 import { useRotatorState } from "./tui/use-rotator-state.js"
 import { discover, refreshAccountToken, isTokenExpired } from "./credential-store.js"
+import { createAuthWatcher } from "./auth-watcher.js"
 import type { TuiState } from "./tui/types.js"
 import type { Accessor } from "solid-js"
 
@@ -102,6 +103,26 @@ const tui = async (api: TuiAPI): Promise<void> => {
   // useRotatorState uses Solid's onCleanup internally for the poll interval.
   // We call it here at the top level of the reactive graph.
   const { state, refresh } = useRotatorState()
+
+  // ─── FIX-1: Auth watcher in TUI — for live sidebar updates ───────────────
+  // Starts after account discovery so we know which accounts to match against.
+  // When auth.json changes, we call refresh() to immediately reflect the new
+  // active account from state.json (runtime writes it, TUI reads it).
+  try {
+    const discoveredAccounts = await discover()
+    const tuiWatcher = createAuthWatcher({
+      accounts: discoveredAccounts,
+      onAccountChanged: (_accountName) => {
+        // Trigger an immediate re-read of state.json so TUI reflects the change
+        void refresh()
+      },
+    })
+    api.lifecycle.onDispose(() => {
+      tuiWatcher.close()
+    })
+  } catch {
+    // Auth watcher is best-effort in TUI — never block rendering
+  }
 
   // ─── Toast deduplication (per state transition) ──────────────────────────
   let lastActiveAccount: string | null = null

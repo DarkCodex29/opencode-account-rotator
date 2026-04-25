@@ -29,6 +29,10 @@ function statusEmoji(status: AccountDisplayStatus): string {
       return "🔴"
     case "disabled":
       return "⚫"
+    case "exhausted":
+      return "🔴"
+    case "unknown":
+      return "🟡"
   }
 }
 
@@ -44,6 +48,10 @@ function statusLabel(status: AccountDisplayStatus): string {
       return "expired"
     case "disabled":
       return "disabled"
+    case "exhausted":
+      return "exhausted"
+    case "unknown":
+      return "unknown"
   }
 }
 
@@ -112,6 +120,10 @@ export function SidebarPanel(props: SidebarPanelProps) {
           return props.theme["warning"] ?? "yellow"
         case "disabled":
           return props.theme["textMuted"] ?? "gray"
+        case "exhausted":
+          return props.theme["error"] ?? "red"
+        case "unknown":
+          return props.theme["warning"] ?? "yellow"
       }
     }
 

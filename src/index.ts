@@ -18,6 +18,7 @@ import {
   applyConfigOrder,
   refreshAccountToken,
   isTokenExpired,
+  readAuthJson,
 } from "./credential-store.js"
 import {
   RotationEngine,
@@ -25,6 +26,8 @@ import {
   parseRetryAfter,
 } from "./rotation-engine.js"
 import { loadState, saveState } from "./state.js"
+import { matchTokenToAccount, createAuthWatcher } from "./auth-watcher.js"
+import { probeAllAccounts } from "./health-check.js"
 import type { Account, RotationState } from "./types.js"
 
 // ---------------------------------------------------------------------------
@@ -61,6 +64,7 @@ type AnyEvent = SessionErrorEvent | { type: string }
 
 type PluginHooks = {
   event?: (context: { event: AnyEvent }) => void | Promise<void>
+  dispose?: () => void | Promise<void>
 }
 
 type Plugin = (input: PluginInput) => PluginHooks | Promise<PluginHooks>
@@ -105,8 +109,65 @@ const plugin: Plugin = async (input: PluginInput): Promise<PluginHooks> => {
     }
   }
 
+  // --- FIX-4: Startup auth sync — read auth.json and set correct activeAccount ---
+  // Must happen BEFORE writing initial state so TUI sees the correct active account.
+  const authData = await readAuthJson()
+  if (authData !== null) {
+    const matchedName = matchTokenToAccount(authData.access, accounts)
+    if (matchedName !== null) {
+      // restoreState() mutates internal engine state directly
+      engine.restoreState({ activeAccount: matchedName })
+      notify(
+        `[account-rotator] Startup auth sync: active account set to "${matchedName}"`,
+        config.notifyOnRotation
+      )
+    } else {
+      console.warn(
+        "[account-rotator] Startup auth sync: auth.json token does not match any known CCS account"
+      )
+    }
+  }
+
   // --- Step 6: Write initial state so TUI can display accounts immediately ---
   await saveState(engine.getState())
+
+  // --- FIX-2: Run startup health check on all accounts (parallel) ---
+  // Fire-and-forget: don't block plugin init. Results are written to state.json
+  // so the TUI can read healthStatuses on the next poll tick.
+  void (async () => {
+    try {
+      const healthMap = await probeAllAccounts(accounts)
+      const currentState = engine.getState()
+      const healthStatuses: Record<string, import("./types.js").HealthStatus> = {}
+      for (const [name, status] of healthMap) {
+        healthStatuses[name] = status
+      }
+      await saveState({ ...currentState, healthStatuses })
+      notify(
+        `[account-rotator] Health check complete: ${JSON.stringify(healthStatuses)}`,
+        config.notifyOnRotation
+      )
+    } catch (err) {
+      console.warn(`[account-rotator] Health check error: ${String(err)}`)
+    }
+  })()
+
+  // --- FIX-1: Start auth watcher for live rotation detection ---
+  const authWatcher = createAuthWatcher({
+    accounts,
+    onAccountChanged: async (accountName) => {
+      const currentState = engine.getState()
+      if (accountName !== currentState.activeAccount) {
+        // Mutate engine state via restoreState() — the canonical mutation path
+        engine.restoreState({ activeAccount: accountName })
+        await saveState(engine.getState())
+        notify(
+          `[account-rotator] Auth watcher: active account changed to "${accountName ?? "null"}"`,
+          config.notifyOnRotation
+        )
+      }
+    },
+  })
 
   notify(
     `✅ Account Rotator: loaded ${accounts.length} account(s) — ${accounts.map((a) => a.name).join(", ")}`,
@@ -115,9 +176,14 @@ const plugin: Plugin = async (input: PluginInput): Promise<PluginHooks> => {
 
   // ---------------------------------------------------------------------------
   // Event hook — intercepts session.error for 429 detection (REQ-001, SC-001, SC-002)
+  // Auth watcher (FIX-1) is the PRIMARY detection mechanism.
+  // session.error hook kept as SECONDARY fallback — do NOT remove.
   // ---------------------------------------------------------------------------
 
   return {
+    dispose: () => {
+      authWatcher.close()
+    },
     event: async ({ event }) => {
       // Only handle session.error events
       if (event.type !== "session.error") return

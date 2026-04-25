@@ -85,6 +85,8 @@ export interface PersistedState {
   cooldowns: CooldownEntry[]
   /** Timestamp of the last rotation */
   lastRotation: number | null
+  /** Health status per account name, as probed at startup */
+  healthStatuses?: Record<string, HealthStatus>
 }
 
 /**
@@ -178,6 +180,12 @@ export interface OAuthTokenResponse {
 // ---------------------------------------------------------------------------
 
 /**
+ * Health status as reported by a startup probe against the Anthropic API.
+ * Written to state.json by the runtime plugin; read by the TUI.
+ */
+export type HealthStatus = "ready" | "exhausted" | "unknown" | "unchecked"
+
+/**
  * Display status for an account in the TUI sidebar and footer badge.
  * Derived from the persisted state + live cooldown calculation.
  */
@@ -187,3 +195,5 @@ export type AccountDisplayStatus =
   | "cooldown"
   | "expired"
   | "disabled"
+  | "exhausted"
+  | "unknown"
